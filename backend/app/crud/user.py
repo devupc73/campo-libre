@@ -10,7 +10,6 @@ class UserCrud:
     @staticmethod
     def create(db: Session, payload: UserCreate):
         data = payload.model_dump()
-
         password = data.pop('password')
 
         user = User(
@@ -27,3 +26,7 @@ class UserCrud:
     @staticmethod
     def get_all(db: Session):
         return db.query(User).all()
+
+    @staticmethod
+    def get_by_email(db: Session, email: str):
+        return db.query(User).filter(User.email == email).first()
