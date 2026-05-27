@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
@@ -25,16 +26,31 @@ def list_complexes():
 @router.post('')
 def create_complex(payload: SportsComplexCreate):
     db: Session = SessionLocal()
-
     complex_item = SportsComplex(
         name=payload.name,
         address=payload.address,
         latitude=payload.latitude,
         longitude=payload.longitude,
     )
-
     db.add(complex_item)
     db.commit()
     db.refresh(complex_item)
+    return complex_item
 
+
+@router.put('/{complex_id}')
+def update_complex(complex_id: int, payload: SportsComplexCreate):
+    db: Session = SessionLocal()
+    complex_item = db.query(SportsComplex).filter(SportsComplex.id == complex_id).first()
+
+    if not complex_item:
+        raise HTTPException(status_code=404, detail='Sports complex not found')
+
+    complex_item.name = payload.name
+    complex_item.address = payload.address
+    complex_item.latitude = payload.latitude
+    complex_item.longitude = payload.longitude
+
+    db.commit()
+    db.refresh(complex_item)
     return complex_item
