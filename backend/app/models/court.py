@@ -1,7 +1,7 @@
 from sqlalchemy import Column
+from sqlalchemy import Float
 from sqlalchemy import Integer
 from sqlalchemy import String
-from sqlalchemy import Float
 
 from app.database import Base
 
@@ -10,6 +10,7 @@ class Court(Base):
     __tablename__ = 'courts'
 
     id = Column(Integer, primary_key=True, index=True)
+    complex_id = Column(Integer, nullable=True)
     name = Column(String, nullable=False)
     sport = Column(String, nullable=False)
     capacity = Column(Integer, nullable=False)
