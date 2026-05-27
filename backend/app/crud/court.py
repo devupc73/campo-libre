@@ -17,3 +17,7 @@ class CourtCrud:
     @staticmethod
     def get_all(db: Session):
         return db.query(Court).all()
+
+    @staticmethod
+    def get_by_complex(db: Session, complex_id: int):
+        return db.query(Court).filter(Court.complex_id == complex_id).all()
