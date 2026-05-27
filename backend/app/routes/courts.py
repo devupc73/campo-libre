@@ -11,7 +11,10 @@ router = APIRouter(prefix='/courts', tags=['courts'])
 
 
 @router.get('/', response_model=list[CourtRead])
-def list_courts(db: Session = Depends(get_db)):
+def list_courts(complex_id: int | None = None, db: Session = Depends(get_db)):
+    if complex_id:
+        return CourtCrud.get_by_complex(db, complex_id)
+
     return CourtCrud.get_all(db)
 
 
