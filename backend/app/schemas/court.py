@@ -2,6 +2,7 @@ from pydantic import BaseModel
 
 
 class CourtBase(BaseModel):
+    complex_id: int | None = None
     name: str
     sport: str
     capacity: int
