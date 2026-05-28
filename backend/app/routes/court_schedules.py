@@ -29,6 +29,7 @@ def create_schedule(payload: CourtScheduleCreate):
         day_of_week=payload.day_of_week,
         start_time=payload.start_time,
         end_time=payload.end_time,
+        price_per_hour=payload.price_per_hour,
     )
 
     db.add(schedule)
