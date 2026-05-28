@@ -8,6 +8,7 @@ class CourtScheduleBase(BaseModel):
     day_of_week: int
     start_time: time
     end_time: time
+    price_per_hour: float
 
 
 class CourtScheduleCreate(CourtScheduleBase):
