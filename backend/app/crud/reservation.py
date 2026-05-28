@@ -8,6 +8,16 @@ class ReservationCrud:
 
     @staticmethod
     def create(db: Session, payload: ReservationCreate):
+        overlapping = db.query(Reservation).filter(
+            Reservation.court_id == payload.court_id,
+            Reservation.status != 'cancelled',
+            Reservation.start_at < payload.end_at,
+            Reservation.end_at > payload.start_at,
+        ).first()
+
+        if overlapping:
+            raise ValueError('Selected schedule is already reserved')
+
         reservation = Reservation(**payload.model_dump())
         db.add(reservation)
         db.commit()
