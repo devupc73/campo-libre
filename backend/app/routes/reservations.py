@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from fastapi import Depends
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.crud.reservation import ReservationCrud
@@ -20,4 +21,7 @@ def create_reservation(
     payload: ReservationCreate,
     db: Session = Depends(get_db),
 ):
-    return ReservationCrud.create(db, payload)
+    try:
+        return ReservationCrud.create(db, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
