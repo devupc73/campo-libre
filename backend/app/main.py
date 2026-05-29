@@ -16,6 +16,7 @@ from app.routes.availability import router as availability_router
 from app.routes.court_schedules import router as court_schedules_router
 from app.routes.courts import router as courts_router
 from app.routes.health import router as health_router
+from app.routes.payments import router as payments_router
 from app.routes.reservations import router as reservations_router
 from app.routes.sports_complexes import router as sports_complexes_router
 from app.routes.users import router as users_router
@@ -40,6 +41,7 @@ app.include_router(court_schedules_router)
 app.include_router(reservations_router)
 app.include_router(sports_complexes_router)
 app.include_router(availability_router)
+app.include_router(payments_router)
 
 
 @app.get('/')
