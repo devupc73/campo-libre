@@ -9,9 +9,36 @@ router = APIRouter(prefix='/payments', tags=['payments'])
 
 
 @router.get('')
-def list_payments():
+def list_payments(reservation_id: int | None = None):
     db: Session = SessionLocal()
-    return db.query(Payment).all()
+    query = db.query(Payment)
+
+    if reservation_id:
+        query = query.filter(Payment.reservation_id == reservation_id)
+
+    return query.all()
+
+
+@router.get('/summary/{reservation_id}')
+def payment_summary(reservation_id: int):
+    db: Session = SessionLocal()
+    payments = db.query(Payment).filter(Payment.reservation_id == reservation_id).all()
+
+    player_total = sum(
+        item.amount for item in payments
+        if item.payment_flow == 'player_to_captain'
+    )
+    complex_total = sum(
+        item.amount for item in payments
+        if item.payment_flow == 'captain_to_complex'
+    )
+
+    return {
+        'reservation_id': reservation_id,
+        'player_contributions_total': player_total,
+        'complex_payments_total': complex_total,
+        'movement_count': len(payments),
+    }
 
 
 @router.post('')
