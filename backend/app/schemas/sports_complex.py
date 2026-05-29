@@ -6,6 +6,10 @@ class SportsComplexCreate(BaseModel):
     address: str
     latitude: float
     longitude: float
+    description: str | None = None
+    phone: str | None = None
+    image_url: str | None = None
+    rating: float = 0
 
 
 class SportsComplexResponse(BaseModel):
@@ -14,6 +18,10 @@ class SportsComplexResponse(BaseModel):
     address: str
     latitude: float
     longitude: float
+    description: str | None = None
+    phone: str | None = None
+    image_url: str | None = None
+    rating: float
     status: str
 
     class Config:
