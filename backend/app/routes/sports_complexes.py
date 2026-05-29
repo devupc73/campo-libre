@@ -9,12 +9,16 @@ from app.schemas.sports_complex import SportsComplexCreate
 router = APIRouter(prefix='/sports-complexes', tags=['sports-complexes'])
 
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+def apply_payload(complex_item: SportsComplex, payload: SportsComplexCreate):
+    complex_item.name = payload.name
+    complex_item.address = payload.address
+    complex_item.latitude = payload.latitude
+    complex_item.longitude = payload.longitude
+    complex_item.description = payload.description
+    complex_item.phone = payload.phone
+    complex_item.image_url = payload.image_url
+    complex_item.rating = payload.rating
+    return complex_item
 
 
 @router.get('')
@@ -26,12 +30,7 @@ def list_complexes():
 @router.post('')
 def create_complex(payload: SportsComplexCreate):
     db: Session = SessionLocal()
-    complex_item = SportsComplex(
-        name=payload.name,
-        address=payload.address,
-        latitude=payload.latitude,
-        longitude=payload.longitude,
-    )
+    complex_item = apply_payload(SportsComplex(), payload)
     db.add(complex_item)
     db.commit()
     db.refresh(complex_item)
@@ -46,11 +45,7 @@ def update_complex(complex_id: int, payload: SportsComplexCreate):
     if not complex_item:
         raise HTTPException(status_code=404, detail='Sports complex not found')
 
-    complex_item.name = payload.name
-    complex_item.address = payload.address
-    complex_item.latitude = payload.latitude
-    complex_item.longitude = payload.longitude
-
+    apply_payload(complex_item, payload)
     db.commit()
     db.refresh(complex_item)
     return complex_item
