@@ -23,6 +23,7 @@ from app.routes.matches import router as matches_router
 from app.routes.payments import router as payments_router
 from app.routes.reservations import router as reservations_router
 from app.routes.sports_complexes import router as sports_complexes_router
+from app.routes.team_generator import router as team_generator_router
 from app.routes.users import router as users_router
 
 Base.metadata.create_all(bind=engine)
@@ -48,6 +49,7 @@ app.include_router(availability_router)
 app.include_router(payments_router)
 app.include_router(matches_router)
 app.include_router(match_participants_router)
+app.include_router(team_generator_router)
 
 
 @app.get('/')
