@@ -6,14 +6,15 @@ import ComboSelect from './ComboSelect';
 import ComplexOperations from './ComplexOperations';
 import DashboardCards from './DashboardCards';
 import MatchWallet from './MatchWallet';
+import SystemComplexManagement from './SystemComplexManagement';
 import UserManagement from './UserManagement';
 
 type Role = 'system_admin' | 'complex_admin' | 'captain' | 'player';
-type Screen = 'home' | 'login' | 'register' | 'systemHome' | 'complexHome' | 'captainHome' | 'playerHome' | 'systemComplexes' | 'systemUsers' | 'complexOps' | 'playerBooking' | 'reservations' | 'wallet';
+type LoginScope = 'public' | 'admin';
+type Screen = 'home' | 'publicHome' | 'adminAccess' | 'login' | 'register' | 'systemHome' | 'complexHome' | 'captainHome' | 'playerHome' | 'systemComplexes' | 'systemUsers' | 'complexOps' | 'playerBooking' | 'reservations' | 'wallet';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 const publicRoleOptions = [
-  { label: 'Administrador del sistema', value: 'system_admin' },
   { label: 'Capitán / gestor', value: 'captain' },
   { label: 'Jugador participante', value: 'player' },
 ];
@@ -21,7 +22,7 @@ const publicRoleOptions = [
 const styles = {
   page: { flex: 1, backgroundColor: '#0f172a' },
   container: { flexGrow: 1, justifyContent: 'center' as const, alignItems: 'center' as const, padding: 24 },
-  card: { width: '100%' as const, maxWidth: 860, backgroundColor: '#111827', borderRadius: 22, padding: 24, borderWidth: 1, borderColor: '#1f2937' },
+  card: { width: '100%' as const, maxWidth: 900, backgroundColor: '#111827', borderRadius: 22, padding: 24, borderWidth: 1, borderColor: '#1f2937' },
   title: { fontSize: 30, fontWeight: 'bold' as const, color: '#fff', marginBottom: 10, textAlign: 'center' as const },
   subtitle: { fontSize: 16, color: '#cbd5e1', textAlign: 'center' as const, marginBottom: 16, marginTop: 12 },
   input: { backgroundColor: '#020617', borderColor: '#334155', borderWidth: 1, color: '#fff', padding: 14, borderRadius: 10, marginBottom: 12 },
@@ -37,6 +38,7 @@ const styles = {
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home');
+  const [loginScope, setLoginScope] = useState<LoginScope>('public');
   const [role, setRole] = useState<Role>('player');
   const [userId, setUserId] = useState('1');
   const [userName, setUserName] = useState('');
@@ -44,18 +46,18 @@ export default function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [result, setResult] = useState('');
-  const [complexId, setComplexId] = useState('');
-  const [complexName, setComplexName] = useState('Complejo Deportivo');
-  const [complexAddress, setComplexAddress] = useState('Lima');
-  const [complexLat, setComplexLat] = useState('-12.0464');
-  const [complexLng, setComplexLng] = useState('-77.0428');
-  const [complexAdminId, setComplexAdminId] = useState('');
 
   function homeFor(userRole: string): Screen {
     if (userRole === 'system_admin') return 'systemHome';
     if (userRole === 'complex_admin') return 'complexHome';
     if (userRole === 'captain') return 'captainHome';
     return 'playerHome';
+  }
+
+  function openLogin(scope: LoginScope) {
+    setLoginScope(scope);
+    setResult('');
+    setScreen('login');
   }
 
   async function register() {
@@ -68,7 +70,7 @@ export default function App() {
       });
       if (!response.ok) throw new Error();
       setResult(`Usuario registrado como ${role}. Ahora inicia sesión.`);
-      setScreen('login');
+      openLogin('public');
     } catch { setResult('No se pudo registrar.'); }
   }
 
@@ -82,24 +84,23 @@ export default function App() {
       });
       if (!response.ok) throw new Error();
       const data = await response.json();
+
+      const isAdminRole = data.role === 'system_admin' || data.role === 'complex_admin';
+      if (loginScope === 'public' && isAdminRole) {
+        setResult('Usa el portal administrativo para ingresar con ese rol.');
+        return;
+      }
+      if (loginScope === 'admin' && !isAdminRole) {
+        setResult('Usa el acceso de jugadores y capitanes para ingresar con ese rol.');
+        return;
+      }
+
       setRole(data.role);
       setUserId(String(data.user_id));
       setUserName(data.full_name);
       setResult('');
       setScreen(homeFor(data.role));
     } catch { setResult('No se pudo iniciar sesión.'); }
-  }
-
-  async function saveComplex() {
-    setResult('Creando complejo y asignando administrador...');
-    try {
-      const payload = { name: complexName, address: complexAddress, latitude: Number(complexLat), longitude: Number(complexLng), system_admin_user_id: Number(userId), complex_admin_user_id: complexAdminId ? Number(complexAdminId) : null, description: '', phone: '', image_url: '', rating: 0 };
-      const response = await fetch(`${API_URL}/sports-complexes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      if (!response.ok) throw new Error();
-      const data = await response.json();
-      setComplexId(String(data.id));
-      setResult(`Complejo creado. ID ${data.id}. Admin complejo: ${data.complex_admin_user_id || 'pendiente'}`);
-    } catch { setResult('No se pudo crear el complejo.'); }
   }
 
   async function listReservations() {
@@ -116,14 +117,23 @@ export default function App() {
 
   let content = null;
 
-  if (screen === 'home') content = <View style={styles.card}><Text style={styles.title}>Campo Libre</Text><Text style={styles.subtitle}>Marketplace deportivo con roles separados.</Text><TouchableOpacity style={styles.primaryButton} onPress={() => setScreen('login')}><Text style={styles.buttonText}>Iniciar sesión</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('register')}><Text style={styles.buttonText}>Crear cuenta</Text></TouchableOpacity><Text style={styles.muted}>API: {API_URL}</Text></View>;
-  if (screen === 'login') content = <View style={styles.card}><Text style={styles.title}>Login</Text><TextInput style={styles.input} placeholder="Email" placeholderTextColor="#64748b" value={email} onChangeText={setEmail} /><TextInput style={styles.input} placeholder="Password" placeholderTextColor="#64748b" value={password} onChangeText={setPassword} secureTextEntry /><TouchableOpacity style={styles.primaryButton} onPress={login}><Text style={styles.buttonText}>Entrar</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('home')}><Text style={styles.buttonText}>Volver</Text></TouchableOpacity>{!!result && <Text style={styles.status}>{result}</Text>}</View>;
-  if (screen === 'register') content = <View style={styles.card}><Text style={styles.title}>Crear cuenta</Text><TextInput style={styles.input} placeholder="Nombre completo" placeholderTextColor="#64748b" value={fullName} onChangeText={setFullName} /><TextInput style={styles.input} placeholder="Email" placeholderTextColor="#64748b" value={email} onChangeText={setEmail} /><TextInput style={styles.input} placeholder="Password" placeholderTextColor="#64748b" value={password} onChangeText={setPassword} secureTextEntry /><ComboSelect styles={styles} label="Tipo de cuenta" value={role} options={publicRoleOptions} onChange={(value) => setRole(value as Role)} /><Text style={styles.muted}>El administrador de complejo solo puede ser asignado por el administrador del sistema.</Text><TouchableOpacity style={styles.primaryButton} onPress={register}><Text style={styles.buttonText}>Registrarme</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('home')}><Text style={styles.buttonText}>Volver</Text></TouchableOpacity>{!!result && <Text style={styles.status}>{result}</Text>}</View>;
-  if (screen === 'systemHome') content = <View style={styles.card}><Text style={styles.title}>Administrador del sistema</Text><Text style={styles.subtitle}>Bienvenido, {userName}</Text><DashboardCards styles={styles} items={[{ label: 'Rol', value: 'Sistema', description: 'Crea complejos y administra usuarios' }, { label: 'Usuario', value: userId, description: 'ID administrador sistema' }]} /><TouchableOpacity style={styles.moduleButton} onPress={() => setScreen('systemComplexes')}><Text style={styles.moduleTitle}>Crear complejo y asignar administrador</Text></TouchableOpacity><TouchableOpacity style={styles.moduleButton} onPress={() => setScreen('systemUsers')}><Text style={styles.moduleTitle}>Gestionar usuarios</Text><Text style={styles.moduleText}>Revisar, modificar roles o eliminar usuarios registrados.</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={logout}><Text style={styles.buttonText}>Cerrar sesión</Text></TouchableOpacity></View>;
+  if (screen === 'home') content = <View style={styles.card}><Text style={styles.title}>Campo Libre</Text><Text style={styles.subtitle}>Selecciona el portal de acceso.</Text><TouchableOpacity style={styles.primaryButton} onPress={() => setScreen('publicHome')}><Text style={styles.buttonText}>Jugadores y capitanes</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('adminAccess')}><Text style={styles.buttonText}>Portal administrativo</Text></TouchableOpacity><Text style={styles.muted}>API: {API_URL}</Text></View>;
+
+  if (screen === 'publicHome') content = <View style={styles.card}><Text style={styles.title}>Jugadores y capitanes</Text><Text style={styles.subtitle}>Aquí pueden ingresar o registrarse capitanes y jugadores.</Text><TouchableOpacity style={styles.primaryButton} onPress={() => openLogin('public')}><Text style={styles.buttonText}>Ingresar</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('register')}><Text style={styles.buttonText}>Registrarme</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('home')}><Text style={styles.buttonText}>Volver</Text></TouchableOpacity></View>;
+
+  if (screen === 'adminAccess') content = <View style={styles.card}><Text style={styles.title}>Portal administrativo</Text><Text style={styles.subtitle}>Ingreso exclusivo para administrador del sistema y administrador del complejo. El administrador del complejo no puede registrarse públicamente.</Text><TouchableOpacity style={styles.primaryButton} onPress={() => openLogin('admin')}><Text style={styles.buttonText}>Ingresar como administrador</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('home')}><Text style={styles.buttonText}>Volver</Text></TouchableOpacity></View>;
+
+  if (screen === 'login') content = <View style={styles.card}><Text style={styles.title}>{loginScope === 'admin' ? 'Login administrativo' : 'Login jugadores/capitanes'}</Text><TextInput style={styles.input} placeholder="Email" placeholderTextColor="#64748b" value={email} onChangeText={setEmail} /><TextInput style={styles.input} placeholder="Password" placeholderTextColor="#64748b" value={password} onChangeText={setPassword} secureTextEntry /><TouchableOpacity style={styles.primaryButton} onPress={login}><Text style={styles.buttonText}>Entrar</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen(loginScope === 'admin' ? 'adminAccess' : 'publicHome')}><Text style={styles.buttonText}>Volver</Text></TouchableOpacity>{!!result && <Text style={styles.status}>{result}</Text>}</View>;
+
+  if (screen === 'register') content = <View style={styles.card}><Text style={styles.title}>Registro público</Text><Text style={styles.subtitle}>Solo para capitanes y jugadores.</Text><TextInput style={styles.input} placeholder="Nombre completo" placeholderTextColor="#64748b" value={fullName} onChangeText={setFullName} /><TextInput style={styles.input} placeholder="Email" placeholderTextColor="#64748b" value={email} onChangeText={setEmail} /><TextInput style={styles.input} placeholder="Password" placeholderTextColor="#64748b" value={password} onChangeText={setPassword} secureTextEntry /><ComboSelect styles={styles} label="Tipo de cuenta" value={role} options={publicRoleOptions} onChange={(value) => setRole(value as Role)} /><Text style={styles.muted}>El administrador del complejo solo puede ser creado por el administrador del sistema.</Text><TouchableOpacity style={styles.primaryButton} onPress={register}><Text style={styles.buttonText}>Registrarme</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('publicHome')}><Text style={styles.buttonText}>Volver</Text></TouchableOpacity>{!!result && <Text style={styles.status}>{result}</Text>}</View>;
+
+  if (screen === 'systemHome') content = <View style={styles.card}><Text style={styles.title}>Administrador del sistema</Text><Text style={styles.subtitle}>Bienvenido, {userName}</Text><DashboardCards styles={styles} items={[{ label: 'Rol', value: 'Sistema', description: 'Gestiona plataforma' }, { label: 'Usuario', value: userId, description: 'ID administrador sistema' }]} /><TouchableOpacity style={styles.moduleButton} onPress={() => setScreen('systemComplexes')}><Text style={styles.moduleTitle}>Gestionar complejos</Text><Text style={styles.moduleText}>Crear, actualizar y asignar administradores.</Text></TouchableOpacity><TouchableOpacity style={styles.moduleButton} onPress={() => setScreen('systemUsers')}><Text style={styles.moduleTitle}>Gestionar usuarios</Text><Text style={styles.moduleText}>Crear administradores de complejo, modificar roles o eliminar usuarios.</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={logout}><Text style={styles.buttonText}>Cerrar sesión</Text></TouchableOpacity></View>;
+
   if (screen === 'complexHome') content = <View style={styles.card}><Text style={styles.title}>Administrador del complejo</Text><Text style={styles.subtitle}>Bienvenido, {userName}</Text><DashboardCards styles={styles} items={[{ label: 'Rol', value: 'Complejo', description: 'Gestiona operación diaria' }, { label: 'Usuario', value: userId, description: 'ID administrador complejo' }]} /><TouchableOpacity style={styles.moduleButton} onPress={() => setScreen('complexOps')}><Text style={styles.moduleTitle}>Campos y disponibilidad</Text></TouchableOpacity><TouchableOpacity style={styles.moduleButton} onPress={() => setScreen('reservations')}><Text style={styles.moduleTitle}>Reservas y pagos</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={logout}><Text style={styles.buttonText}>Cerrar sesión</Text></TouchableOpacity></View>;
+
   if (screen === 'captainHome') content = <View style={styles.card}><CaptainDashboard styles={styles} userId={userId} onBack={() => setScreen('captainHome')} /><TouchableOpacity style={styles.secondaryButton} onPress={logout}><Text style={styles.buttonText}>Cerrar sesión</Text></TouchableOpacity></View>;
   if (screen === 'playerHome') content = <View style={styles.card}><Text style={styles.title}>Jugador participante</Text><Text style={styles.subtitle}>Bienvenido, {userName}</Text><Text style={styles.moduleText}>Este perfil participa en partidos creados por un capitán. No crea reservas ni gestiona la bolsa.</Text><TouchableOpacity style={styles.secondaryButton} onPress={logout}><Text style={styles.buttonText}>Cerrar sesión</Text></TouchableOpacity></View>;
-  if (screen === 'systemComplexes') content = <View style={styles.card}><Text style={styles.title}>Crear complejo</Text><TextInput style={styles.input} placeholder="Nombre complejo" placeholderTextColor="#64748b" value={complexName} onChangeText={setComplexName} /><TextInput style={styles.input} placeholder="Dirección" placeholderTextColor="#64748b" value={complexAddress} onChangeText={setComplexAddress} /><TextInput style={styles.input} placeholder="Latitud" placeholderTextColor="#64748b" value={complexLat} onChangeText={setComplexLat} /><TextInput style={styles.input} placeholder="Longitud" placeholderTextColor="#64748b" value={complexLng} onChangeText={setComplexLng} /><TextInput style={styles.input} placeholder="ID administrador del complejo" placeholderTextColor="#64748b" value={complexAdminId} onChangeText={setComplexAdminId} /><TouchableOpacity style={styles.primaryButton} onPress={saveComplex}><Text style={styles.buttonText}>Crear complejo</Text></TouchableOpacity>{!!complexId && <Text style={styles.status}>Complejo creado: {complexId}</Text>}{!!result && <Text style={styles.status}>{result}</Text>}<Back /></View>;
+  if (screen === 'systemComplexes') content = <View style={styles.card}><SystemComplexManagement styles={styles} systemAdminId={userId} /><Back /></View>;
   if (screen === 'systemUsers') content = <View style={styles.card}><UserManagement styles={styles} /><Back /></View>;
   if (screen === 'complexOps') content = <View style={styles.card}><ComplexOperations styles={styles} /><Back /></View>;
   if (screen === 'playerBooking') content = <View style={styles.card}><Text style={styles.title}>Buscar y reservar</Text><AvailabilitySlots userId={userId} styles={styles} /><Back /></View>;
