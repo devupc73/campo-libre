@@ -24,6 +24,7 @@ from app.routes.match_messages import router as match_messages_router
 from app.routes.match_participants import router as match_participants_router
 from app.routes.matches import router as matches_router
 from app.routes.payments import router as payments_router
+from app.routes.reports import router as reports_router
 from app.routes.reservations import router as reservations_router
 from app.routes.sports_complexes import router as sports_complexes_router
 from app.routes.team_generator import router as team_generator_router
@@ -55,6 +56,7 @@ app.include_router(match_participants_router)
 app.include_router(match_messages_router)
 app.include_router(team_generator_router)
 app.include_router(complex_admin_router)
+app.include_router(reports_router)
 
 
 @app.get('/')
