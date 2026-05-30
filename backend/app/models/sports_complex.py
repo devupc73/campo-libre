@@ -14,6 +14,8 @@ class SportsComplex(Base):
     address = Column(String, nullable=False)
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
+    system_admin_user_id = Column(Integer, nullable=True)
+    complex_admin_user_id = Column(Integer, nullable=True)
     description = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     image_url = Column(String, nullable=True)
