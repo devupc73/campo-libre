@@ -7,6 +7,7 @@ from app.models.court import Court
 from app.models.court_schedule import CourtSchedule
 from app.models.match import Match
 from app.models.match_participant import MatchParticipant
+from app.models.match_message import MatchMessage
 from app.models.participant import Participant
 from app.models.payment import Payment
 from app.models.reservation import Reservation
@@ -15,9 +16,11 @@ from app.models.user import User
 from app.models.wallet import WalletMovement
 from app.routes.auth import router as auth_router
 from app.routes.availability import router as availability_router
+from app.routes.complex_admin import router as complex_admin_router
 from app.routes.court_schedules import router as court_schedules_router
 from app.routes.courts import router as courts_router
 from app.routes.health import router as health_router
+from app.routes.match_messages import router as match_messages_router
 from app.routes.match_participants import router as match_participants_router
 from app.routes.matches import router as matches_router
 from app.routes.payments import router as payments_router
@@ -49,7 +52,9 @@ app.include_router(availability_router)
 app.include_router(payments_router)
 app.include_router(matches_router)
 app.include_router(match_participants_router)
+app.include_router(match_messages_router)
 app.include_router(team_generator_router)
+app.include_router(complex_admin_router)
 
 
 @app.get('/')
