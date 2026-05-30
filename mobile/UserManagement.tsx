@@ -17,6 +17,7 @@ export default function UserManagement({ styles }: any) {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('player');
+  const [password, setPassword] = useState('123456');
   const [message, setMessage] = useState('');
 
   async function loadUsers() {
@@ -32,6 +33,39 @@ export default function UserManagement({ styles }: any) {
   useEffect(() => {
     loadUsers();
   }, []);
+
+  function clearForm() {
+    setSelectedUser(null);
+    setFullName('');
+    setEmail('');
+    setRole('complex_admin');
+    setPassword('123456');
+  }
+
+  async function createComplexAdmin() {
+    try {
+      const response = await fetch(`${API_URL}/users/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: fullName,
+          email,
+          phone: '',
+          role: 'complex_admin',
+          password,
+        }),
+      });
+
+      if (!response.ok) throw new Error();
+
+      const data = await response.json();
+      setMessage(`Administrador de complejo creado. ID ${data.id}`);
+      clearForm();
+      loadUsers();
+    } catch {
+      setMessage('No se pudo crear el administrador de complejo');
+    }
+  }
 
   async function updateUser() {
     if (!selectedUser) return;
@@ -62,7 +96,7 @@ export default function UserManagement({ styles }: any) {
 
       if (!response.ok) throw new Error();
 
-      setSelectedUser(null);
+      clearForm();
       setMessage('Usuario eliminado');
       loadUsers();
     } catch {
@@ -73,6 +107,37 @@ export default function UserManagement({ styles }: any) {
   return (
     <View>
       <Text style={styles.title}>Usuarios registrados</Text>
+      <Text style={styles.subtitle}>Crear administrador de complejo</Text>
+
+      <TextInput
+        style={styles.input}
+        placeholder="Nombre administrador"
+        placeholderTextColor="#64748b"
+        value={fullName}
+        onChangeText={setFullName}
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Email administrador"
+        placeholderTextColor="#64748b"
+        value={email}
+        onChangeText={setEmail}
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Password inicial"
+        placeholderTextColor="#64748b"
+        value={password}
+        onChangeText={setPassword}
+      />
+
+      <TouchableOpacity style={styles.primaryButton} onPress={createComplexAdmin}>
+        <Text style={styles.buttonText}>Crear administrador de complejo</Text>
+      </TouchableOpacity>
+
+      <Text style={styles.subtitle}>Modificar usuario existente</Text>
 
       <ComboSelect
         styles={styles}
@@ -88,6 +153,7 @@ export default function UserManagement({ styles }: any) {
           setFullName(user?.full_name || '');
           setEmail(user?.email || '');
           setRole(user?.role || 'player');
+          setPassword('');
         }}
       />
 
