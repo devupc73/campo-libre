@@ -42,3 +42,16 @@ def update_court(court_id: int, payload: CourtCreate, db: Session = Depends(get_
     db.refresh(court)
 
     return court
+
+
+@router.delete('/{court_id}')
+def delete_court(court_id: int, db: Session = Depends(get_db)):
+    court = db.query(Court).filter(Court.id == court_id).first()
+
+    if not court:
+        raise HTTPException(status_code=404, detail='Court not found')
+
+    db.delete(court)
+    db.commit()
+
+    return {'message': 'Court deleted'}
