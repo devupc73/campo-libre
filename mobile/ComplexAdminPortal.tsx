@@ -20,6 +20,17 @@ export default function ComplexAdminPortal({ styles, onLogout }: Props) {
   const [selectedComplex, setSelectedComplex] = useState<any>(null);
   const [message, setMessage] = useState('');
 
+  function logoutLocal() {
+    setEmail('');
+    setPassword('');
+    setUserId('');
+    setUserName('');
+    setAssignedComplexes([]);
+    setSelectedComplex(null);
+    setMessage('');
+    onLogout();
+  }
+
   async function loadAssignedComplexes(adminUserId: string) {
     const response = await fetch(`${API_URL}/complex-admin/complexes/${adminUserId}`);
     const data = await response.json();
@@ -84,7 +95,7 @@ export default function ComplexAdminPortal({ styles, onLogout }: Props) {
             <Text style={styles.subtitle}>Solicita al administrador del sistema que te asigne uno o más complejos.</Text>
           </>
         )}
-        <TouchableOpacity style={styles.secondaryButton} onPress={onLogout}>
+        <TouchableOpacity style={styles.secondaryButton} onPress={logoutLocal}>
           <Text style={styles.buttonText}>Cerrar sesión</Text>
         </TouchableOpacity>
       </View>
@@ -106,7 +117,7 @@ export default function ComplexAdminPortal({ styles, onLogout }: Props) {
       <TouchableOpacity style={styles.secondaryButton} onPress={() => setSelectedComplex(null)}>
         <Text style={styles.buttonText}>Cambiar complejo</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.secondaryButton} onPress={onLogout}>
+      <TouchableOpacity style={styles.secondaryButton} onPress={logoutLocal}>
         <Text style={styles.buttonText}>Cerrar sesión</Text>
       </TouchableOpacity>
     </View>
