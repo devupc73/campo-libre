@@ -11,13 +11,21 @@ import UserManagement from './UserManagement';
 
 type Role = 'system_admin' | 'complex_admin' | 'captain' | 'player';
 type LoginScope = 'general' | 'system';
-type Screen = 'home' | 'generalAccess' | 'systemAccess' | 'login' | 'register' | 'systemHome' | 'complexHome' | 'captainHome' | 'playerHome' | 'systemComplexes' | 'systemUsers' | 'complexOps' | 'playerBooking' | 'reservations' | 'wallet';
+type Screen = 'home' | 'generalAccess' | 'systemAccess' | 'login' | 'register' | 'systemRegister' | 'systemHome' | 'complexHome' | 'captainHome' | 'playerHome' | 'systemComplexes' | 'systemUsers' | 'complexOps' | 'playerBooking' | 'reservations' | 'wallet';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 const publicRoleOptions = [
   { label: 'Capitán / gestor', value: 'captain' },
   { label: 'Jugador participante', value: 'player' },
 ];
+
+function initialScreenFromPath(): Screen {
+  if (typeof window === 'undefined') return 'home';
+  const path = window.location.pathname.toLowerCase();
+  if (path.includes('admin-system')) return 'systemAccess';
+  if (path.includes('general')) return 'generalAccess';
+  return 'home';
+}
 
 const styles = {
   page: { flex: 1, backgroundColor: '#0f172a' },
@@ -37,8 +45,8 @@ const styles = {
 };
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>('home');
-  const [loginScope, setLoginScope] = useState<LoginScope>('general');
+  const [screen, setScreen] = useState<Screen>(initialScreenFromPath());
+  const [loginScope, setLoginScope] = useState<LoginScope>(initialScreenFromPath() === 'systemAccess' ? 'system' : 'general');
   const [role, setRole] = useState<Role>('player');
   const [userId, setUserId] = useState('1');
   const [userName, setUserName] = useState('');
@@ -46,6 +54,13 @@ export default function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [result, setResult] = useState('');
+
+  function navigate(nextScreen: Screen, path?: string) {
+    setScreen(nextScreen);
+    if (typeof window !== 'undefined' && path) {
+      window.history.pushState({}, '', path);
+    }
+  }
 
   function homeFor(userRole: string): Screen {
     if (userRole === 'system_admin') return 'systemHome';
@@ -74,6 +89,20 @@ export default function App() {
     } catch { setResult('No se pudo registrar.'); }
   }
 
+  async function registerSystemAdmin() {
+    setResult('Registrando administrador del sistema...');
+    try {
+      const response = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ full_name: fullName, email, phone: '', role: 'system_admin', password }),
+      });
+      if (!response.ok) throw new Error();
+      setResult('Administrador del sistema registrado. Ahora inicia sesión.');
+      openLogin('system');
+    } catch { setResult('No se pudo registrar el administrador del sistema.'); }
+  }
+
   async function login() {
     setResult('Iniciando sesión...');
     try {
@@ -86,7 +115,7 @@ export default function App() {
       const data = await response.json();
 
       if (loginScope === 'general' && data.role === 'system_admin') {
-        setResult('Usa el acceso de administrador del sistema para ingresar con ese rol.');
+        setResult('Usa la URL /admin-system para ingresar con ese rol.');
         return;
       }
       if (loginScope === 'system' && data.role !== 'system_admin') {
@@ -111,20 +140,22 @@ export default function App() {
     } catch { setResult('No se pudo consultar reservas.'); }
   }
 
-  function logout() { setResult(''); setUserId('1'); setUserName(''); setScreen('home'); }
+  function logout() { setResult(''); setUserId('1'); setUserName(''); navigate('home', '/'); }
   const Back = () => <TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen(homeFor(role))}><Text style={styles.buttonText}>Volver</Text></TouchableOpacity>;
 
   let content = null;
 
-  if (screen === 'home') content = <View style={styles.card}><Text style={styles.title}>Campo Libre</Text><Text style={styles.subtitle}>Selecciona el acceso correspondiente.</Text><TouchableOpacity style={styles.primaryButton} onPress={() => setScreen('generalAccess')}><Text style={styles.buttonText}>Acceso general</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('systemAccess')}><Text style={styles.buttonText}>Administrador del sistema</Text></TouchableOpacity><Text style={styles.muted}>API: {API_URL}</Text></View>;
+  if (screen === 'home') content = <View style={styles.card}><Text style={styles.title}>Campo Libre</Text><Text style={styles.subtitle}>Usa URLs separadas para cada acceso.</Text><TouchableOpacity style={styles.primaryButton} onPress={() => navigate('generalAccess', '/general')}><Text style={styles.buttonText}>Ir a /general</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => navigate('systemAccess', '/admin-system')}><Text style={styles.buttonText}>Ir a /admin-system</Text></TouchableOpacity><Text style={styles.muted}>API: {API_URL}</Text></View>;
 
-  if (screen === 'generalAccess') content = <View style={styles.card}><Text style={styles.title}>Acceso general</Text><Text style={styles.subtitle}>Ingresan administradores de complejo, capitanes y jugadores. Solo capitanes y jugadores pueden registrarse.</Text><TouchableOpacity style={styles.primaryButton} onPress={() => openLogin('general')}><Text style={styles.buttonText}>Ingresar</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('register')}><Text style={styles.buttonText}>Registrarme como capitán o jugador</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('home')}><Text style={styles.buttonText}>Volver</Text></TouchableOpacity></View>;
+  if (screen === 'generalAccess') content = <View style={styles.card}><Text style={styles.title}>Acceso general</Text><Text style={styles.subtitle}>URL: /general. Ingresan administradores de complejo, capitanes y jugadores. Solo capitanes y jugadores pueden registrarse.</Text><TouchableOpacity style={styles.primaryButton} onPress={() => openLogin('general')}><Text style={styles.buttonText}>Ingresar</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('register')}><Text style={styles.buttonText}>Registrarme como capitán o jugador</Text></TouchableOpacity></View>;
 
-  if (screen === 'systemAccess') content = <View style={styles.card}><Text style={styles.title}>Administrador del sistema</Text><Text style={styles.subtitle}>Acceso exclusivo para gestionar la plataforma, usuarios y complejos.</Text><TouchableOpacity style={styles.primaryButton} onPress={() => openLogin('system')}><Text style={styles.buttonText}>Ingresar como administrador del sistema</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('home')}><Text style={styles.buttonText}>Volver</Text></TouchableOpacity></View>;
+  if (screen === 'systemAccess') content = <View style={styles.card}><Text style={styles.title}>Administrador del sistema</Text><Text style={styles.subtitle}>URL: /admin-system. Acceso exclusivo para gestionar plataforma, usuarios y complejos.</Text><TouchableOpacity style={styles.primaryButton} onPress={() => openLogin('system')}><Text style={styles.buttonText}>Ingresar como administrador del sistema</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('systemRegister')}><Text style={styles.buttonText}>Registrar administrador del sistema</Text></TouchableOpacity></View>;
 
   if (screen === 'login') content = <View style={styles.card}><Text style={styles.title}>{loginScope === 'system' ? 'Login administrador del sistema' : 'Login acceso general'}</Text><TextInput style={styles.input} placeholder="Email" placeholderTextColor="#64748b" value={email} onChangeText={setEmail} /><TextInput style={styles.input} placeholder="Password" placeholderTextColor="#64748b" value={password} onChangeText={setPassword} secureTextEntry /><TouchableOpacity style={styles.primaryButton} onPress={login}><Text style={styles.buttonText}>Entrar</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen(loginScope === 'system' ? 'systemAccess' : 'generalAccess')}><Text style={styles.buttonText}>Volver</Text></TouchableOpacity>{!!result && <Text style={styles.status}>{result}</Text>}</View>;
 
   if (screen === 'register') content = <View style={styles.card}><Text style={styles.title}>Registro público</Text><Text style={styles.subtitle}>Solo para capitanes y jugadores.</Text><TextInput style={styles.input} placeholder="Nombre completo" placeholderTextColor="#64748b" value={fullName} onChangeText={setFullName} /><TextInput style={styles.input} placeholder="Email" placeholderTextColor="#64748b" value={email} onChangeText={setEmail} /><TextInput style={styles.input} placeholder="Password" placeholderTextColor="#64748b" value={password} onChangeText={setPassword} secureTextEntry /><ComboSelect styles={styles} label="Tipo de cuenta" value={role} options={publicRoleOptions} onChange={(value) => setRole(value as Role)} /><Text style={styles.muted}>El administrador del complejo solo puede ser creado y asignado por el administrador del sistema.</Text><TouchableOpacity style={styles.primaryButton} onPress={register}><Text style={styles.buttonText}>Registrarme</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('generalAccess')}><Text style={styles.buttonText}>Volver</Text></TouchableOpacity>{!!result && <Text style={styles.status}>{result}</Text>}</View>;
+
+  if (screen === 'systemRegister') content = <View style={styles.card}><Text style={styles.title}>Registro administrador del sistema</Text><Text style={styles.subtitle}>Disponible únicamente desde /admin-system.</Text><TextInput style={styles.input} placeholder="Nombre completo" placeholderTextColor="#64748b" value={fullName} onChangeText={setFullName} /><TextInput style={styles.input} placeholder="Email" placeholderTextColor="#64748b" value={email} onChangeText={setEmail} /><TextInput style={styles.input} placeholder="Password" placeholderTextColor="#64748b" value={password} onChangeText={setPassword} secureTextEntry /><TouchableOpacity style={styles.primaryButton} onPress={registerSystemAdmin}><Text style={styles.buttonText}>Registrar administrador del sistema</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('systemAccess')}><Text style={styles.buttonText}>Volver</Text></TouchableOpacity>{!!result && <Text style={styles.status}>{result}</Text>}</View>;
 
   if (screen === 'systemHome') content = <View style={styles.card}><Text style={styles.title}>Administrador del sistema</Text><Text style={styles.subtitle}>Bienvenido, {userName}</Text><DashboardCards styles={styles} items={[{ label: 'Rol', value: 'Sistema', description: 'Gestiona plataforma' }, { label: 'Usuario', value: userId, description: 'ID administrador sistema' }]} /><TouchableOpacity style={styles.moduleButton} onPress={() => setScreen('systemComplexes')}><Text style={styles.moduleTitle}>Gestionar complejos</Text><Text style={styles.moduleText}>Crear, actualizar y asignar administradores.</Text></TouchableOpacity><TouchableOpacity style={styles.moduleButton} onPress={() => setScreen('systemUsers')}><Text style={styles.moduleTitle}>Gestionar usuarios</Text><Text style={styles.moduleText}>Crear administradores de complejo, modificar roles o eliminar usuarios.</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={logout}><Text style={styles.buttonText}>Cerrar sesión</Text></TouchableOpacity></View>;
 
