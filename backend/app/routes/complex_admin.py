@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.models.complex_admin_assignment import ComplexAdminAssignment
 from app.models.court import Court
+from app.models.court_rate import CourtRate
 from app.models.payment import Payment
 from app.models.reservation import Reservation
 from app.models.sports_complex import SportsComplex
@@ -49,6 +50,35 @@ def create_admin_assignment(payload: dict):
     entity = ComplexAdminAssignment(
         complex_id=complex_id,
         admin_user_id=admin_user_id,
+        status='active',
+    )
+    db.add(entity)
+    db.commit()
+    db.refresh(entity)
+    return entity
+
+
+@router.get('/court-rates/{complex_id}')
+def list_court_rates(complex_id: int):
+    db: Session = SessionLocal()
+    return db.query(CourtRate).filter(
+        CourtRate.complex_id == complex_id,
+        CourtRate.status == 'active',
+    ).all()
+
+
+@router.post('/court-rates')
+def create_court_rate(payload: dict):
+    db: Session = SessionLocal()
+
+    entity = CourtRate(
+        complex_id=payload.get('complex_id'),
+        court_id=payload.get('court_id'),
+        day_of_week=payload.get('day_of_week'),
+        start_time=payload.get('start_time'),
+        end_time=payload.get('end_time'),
+        price_per_hour=payload.get('price_per_hour'),
+        description=payload.get('description'),
         status='active',
     )
     db.add(entity)
