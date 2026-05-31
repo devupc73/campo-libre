@@ -4,30 +4,63 @@ import ComboSelect from './ComboSelect';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 
+function dayName(day: number) {
+  const days: any = {
+    1: 'Lunes',
+    2: 'Martes',
+    3: 'Miércoles',
+    4: 'Jueves',
+    5: 'Viernes',
+    6: 'Sábado',
+    7: 'Domingo',
+  };
+  return days[day] || `Día ${day}`;
+}
+
 export default function ComplexRateManager({ styles, selectedComplex }: any) {
   const [courts, setCourts] = useState<any[]>([]);
+  const [schedules, setSchedules] = useState<any[]>([]);
   const [selectedCourt, setSelectedCourt] = useState('');
-  const [dayOfWeek, setDayOfWeek] = useState('1');
-  const [startTime, setStartTime] = useState('18:00:00');
-  const [endTime, setEndTime] = useState('19:00:00');
+  const [selectedSchedule, setSelectedSchedule] = useState('');
   const [price, setPrice] = useState('120');
-  const [description, setDescription] = useState('Horario regular');
+  const [description, setDescription] = useState('Tarifa por franja');
   const [message, setMessage] = useState('');
 
   useEffect(() => {
     loadCourts();
-  }, []);
+  }, [selectedComplex?.id]);
 
   async function loadCourts() {
     try {
       const courtsResponse = await fetch(`${API_URL}/courts/`);
-      setCourts(await courtsResponse.json());
+      const data = await courtsResponse.json();
+      setCourts(Array.isArray(data) ? data : []);
     } catch {
       setMessage('No se pudieron cargar las canchas');
     }
   }
 
+  async function loadSchedules(courtId: string) {
+    setSelectedSchedule('');
+
+    try {
+      const response = await fetch(`${API_URL}/court-schedules?court_id=${courtId}`);
+      const data = await response.json();
+      setSchedules(Array.isArray(data) ? data : []);
+    } catch {
+      setSchedules([]);
+      setMessage('No se pudieron cargar las franjas horarias');
+    }
+  }
+
   async function saveRate() {
+    const schedule = schedules.find((item) => String(item.id) === selectedSchedule);
+
+    if (!schedule) {
+      setMessage('Selecciona una franja horaria creada previamente.');
+      return;
+    }
+
     try {
       const response = await fetch(`${API_URL}/complex-admin/court-rates`, {
         method: 'POST',
@@ -35,9 +68,10 @@ export default function ComplexRateManager({ styles, selectedComplex }: any) {
         body: JSON.stringify({
           complex_id: Number(selectedComplex?.id),
           court_id: Number(selectedCourt),
-          day_of_week: Number(dayOfWeek),
-          start_time: startTime,
-          end_time: endTime,
+          court_schedule_id: Number(selectedSchedule),
+          day_of_week: Number(schedule.day_of_week),
+          start_time: schedule.start_time,
+          end_time: schedule.end_time,
           price_per_hour: Number(price),
           description,
         }),
@@ -45,7 +79,7 @@ export default function ComplexRateManager({ styles, selectedComplex }: any) {
 
       if (!response.ok) throw new Error();
 
-      setMessage('Tarifa por franja horaria registrada correctamente');
+      setMessage('Tarifa registrada para la franja seleccionada');
     } catch {
       setMessage('No se pudo registrar la tarifa');
     }
@@ -54,7 +88,7 @@ export default function ComplexRateManager({ styles, selectedComplex }: any) {
   return (
     <View>
       <Text style={styles.title}>Tarifas por franja horaria</Text>
-      <Text style={styles.subtitle}>Configura tarifas diarias por cancha y ventana horaria.</Text>
+      <Text style={styles.subtitle}>Primero crea la disponibilidad. Luego selecciona cada franja y registra su tarifa.</Text>
 
       <ComboSelect
         styles={styles}
@@ -66,31 +100,21 @@ export default function ComplexRateManager({ styles, selectedComplex }: any) {
             label: `${court.name} - ${court.sport}`,
             value: String(court.id),
           }))}
-        onChange={setSelectedCourt}
+        onChange={(value) => {
+          setSelectedCourt(value);
+          loadSchedules(value);
+        }}
       />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Día 1=Lunes, 7=Domingo"
-        placeholderTextColor="#64748b"
-        value={dayOfWeek}
-        onChangeText={setDayOfWeek}
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Inicio HH:MM:SS"
-        placeholderTextColor="#64748b"
-        value={startTime}
-        onChangeText={setStartTime}
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Fin HH:MM:SS"
-        placeholderTextColor="#64748b"
-        value={endTime}
-        onChangeText={setEndTime}
+      <ComboSelect
+        styles={styles}
+        label="Franja horaria disponible"
+        value={selectedSchedule}
+        options={schedules.map((schedule) => ({
+          label: `${dayName(Number(schedule.day_of_week))} ${schedule.start_time} - ${schedule.end_time}`,
+          value: String(schedule.id),
+        }))}
+        onChange={setSelectedSchedule}
       />
 
       <TextInput
@@ -110,7 +134,7 @@ export default function ComplexRateManager({ styles, selectedComplex }: any) {
       />
 
       <TouchableOpacity style={styles.primaryButton} onPress={saveRate}>
-        <Text style={styles.buttonText}>Guardar tarifa</Text>
+        <Text style={styles.buttonText}>Guardar tarifa para esta franja</Text>
       </TouchableOpacity>
 
       {!!message && <Text style={styles.status}>{message}</Text>}
