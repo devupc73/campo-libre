@@ -49,3 +49,18 @@ def update_complex(complex_id: int, payload: SportsComplexCreate):
     db.commit()
     db.refresh(complex_item)
     return complex_item
+
+
+@router.delete('/{complex_id}')
+def delete_complex(complex_id: int):
+    db: Session = SessionLocal()
+
+    complex_item = db.query(SportsComplex).filter(SportsComplex.id == complex_id).first()
+
+    if not complex_item:
+        raise HTTPException(status_code=404, detail='Sports complex not found')
+
+    db.delete(complex_item)
+    db.commit()
+
+    return {'message': 'Sports complex deleted'}
