@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
@@ -37,3 +38,39 @@ def create_schedule(payload: CourtScheduleCreate):
     db.refresh(schedule)
 
     return schedule
+
+
+@router.put('/{schedule_id}')
+def update_schedule(schedule_id: int, payload: CourtScheduleCreate):
+    db: Session = SessionLocal()
+
+    schedule = db.query(CourtSchedule).filter(CourtSchedule.id == schedule_id).first()
+
+    if not schedule:
+        raise HTTPException(status_code=404, detail='Court schedule not found')
+
+    schedule.court_id = payload.court_id
+    schedule.day_of_week = payload.day_of_week
+    schedule.start_time = payload.start_time
+    schedule.end_time = payload.end_time
+    schedule.price_per_hour = payload.price_per_hour
+
+    db.commit()
+    db.refresh(schedule)
+
+    return schedule
+
+
+@router.delete('/{schedule_id}')
+def delete_schedule(schedule_id: int):
+    db: Session = SessionLocal()
+
+    schedule = db.query(CourtSchedule).filter(CourtSchedule.id == schedule_id).first()
+
+    if not schedule:
+        raise HTTPException(status_code=404, detail='Court schedule not found')
+
+    db.delete(schedule)
+    db.commit()
+
+    return {'message': 'Court schedule deleted'}
