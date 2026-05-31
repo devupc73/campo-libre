@@ -13,6 +13,7 @@ from app.models.payment import Payment
 from app.models.reservation import Reservation
 from app.models.sports_complex import SportsComplex
 from app.models.user import User
+from app.models.user_rate import UserRate
 from app.models.wallet import WalletMovement
 from app.routes.auth import router as auth_router
 from app.routes.availability import router as availability_router
@@ -28,6 +29,7 @@ from app.routes.reports import router as reports_router
 from app.routes.reservations import router as reservations_router
 from app.routes.sports_complexes import router as sports_complexes_router
 from app.routes.team_generator import router as team_generator_router
+from app.routes.user_rates import router as user_rates_router
 from app.routes.users import router as users_router
 
 Base.metadata.create_all(bind=engine)
@@ -57,6 +59,7 @@ app.include_router(match_messages_router)
 app.include_router(team_generator_router)
 app.include_router(complex_admin_router)
 app.include_router(reports_router)
+app.include_router(user_rates_router)
 
 
 @app.get('/')
