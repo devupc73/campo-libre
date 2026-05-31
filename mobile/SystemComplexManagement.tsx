@@ -41,6 +41,23 @@ export default function SystemComplexManagement({ styles, systemAdminId }: any) 
     setComplexAdminId(complex?.complex_admin_user_id ? String(complex.complex_admin_user_id) : '');
   }
 
+  async function saveAssignment(complexId: number) {
+    if (!complexAdminId) return;
+
+    const response = await fetch(`${API_URL}/complex-admin-assignments/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        complex_id: complexId,
+        admin_user_id: Number(complexAdminId),
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('assignment_failed');
+    }
+  }
+
   async function saveComplex(update = false) {
     setMessage(update ? 'Actualizando complejo...' : 'Creando complejo...');
     try {
@@ -67,13 +84,16 @@ export default function SystemComplexManagement({ styles, systemAdminId }: any) 
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) throw new Error();
+      if (!response.ok) throw new Error('complex_failed');
       const data = await response.json();
+
+      await saveAssignment(data.id);
+
       fillComplex(data);
-      setMessage(`Complejo guardado. ID ${data.id}`);
+      setMessage(`Complejo guardado y administrador asignado. ID ${data.id}`);
       loadData();
     } catch {
-      setMessage('No se pudo guardar el complejo.');
+      setMessage('No se pudo guardar el complejo o asignar administrador. Verifica que el backend tenga activo /complex-admin-assignments.');
     }
   }
 
