@@ -107,6 +107,7 @@ export default function ComplexRateManager({ styles, selectedComplex }: any) {
   const averagePrice = prices.length ? Math.round(totalPotential / prices.length) : 0;
   const minPrice = prices.length ? Math.min(...prices) : 0;
   const maxPrice = prices.length ? Math.max(...prices) : 0;
+  const configuredCourtIds = new Set(filteredRates.map((rate) => String(rate.court_id)));
 
   return (
     <View>
@@ -117,9 +118,11 @@ export default function ComplexRateManager({ styles, selectedComplex }: any) {
         styles={styles}
         items={[
           { label: 'Franjas con tarifa', value: filteredRates.length, description: selectedCourt ? 'Campo seleccionado' : 'Complejo seleccionado' },
+          { label: 'Campos con tarifa', value: configuredCourtIds.size, description: 'Campos con al menos una tarifa' },
           { label: 'Tarifa promedio', value: `S/ ${averagePrice}`, description: 'Promedio de franjas filtradas' },
           { label: 'Tarifa mínima', value: `S/ ${minPrice}`, description: 'Precio más bajo configurado' },
-          { label: 'Ingreso potencial', value: `S/ ${totalPotential}`, description: 'Suma de tarifas por franja' },
+          { label: 'Tarifa máxima', value: `S/ ${maxPrice}`, description: 'Precio más alto configurado' },
+          { label: 'Ingreso potencial', value: `S/ ${totalPotential}`, description: 'Suma de tarifas por franja filtrada' },
         ]}
       />
 
