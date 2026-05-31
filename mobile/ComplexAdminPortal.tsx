@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ComplexOperations from './ComplexOperations';
+import ComplexReports from './ComplexReports';
 import ComplexSelector from './ComplexSelector';
 import DashboardCards from './DashboardCards';
 
@@ -18,6 +19,7 @@ export default function ComplexAdminPortal({ styles, onLogout }: Props) {
   const [userName, setUserName] = useState('');
   const [assignedComplexes, setAssignedComplexes] = useState<any[]>([]);
   const [selectedComplex, setSelectedComplex] = useState<any>(null);
+  const [activeSection, setActiveSection] = useState<'operations' | 'reports'>('operations');
   const [message, setMessage] = useState('');
 
   function logoutLocal() {
@@ -27,6 +29,7 @@ export default function ComplexAdminPortal({ styles, onLogout }: Props) {
     setUserName('');
     setAssignedComplexes([]);
     setSelectedComplex(null);
+    setActiveSection('operations');
     setMessage('');
     onLogout();
   }
@@ -87,7 +90,10 @@ export default function ComplexAdminPortal({ styles, onLogout }: Props) {
           <ComplexSelector
             styles={styles}
             complexes={assignedComplexes}
-            onSelect={setSelectedComplex}
+            onSelect={(complex: any) => {
+              setSelectedComplex(complex);
+              setActiveSection('operations');
+            }}
           />
         ) : (
           <>
@@ -113,7 +119,20 @@ export default function ComplexAdminPortal({ styles, onLogout }: Props) {
           { label: 'Usuario', value: userId, description: userName },
         ]}
       />
-      <ComplexOperations styles={styles} selectedComplex={selectedComplex} />
+
+      <TouchableOpacity style={activeSection === 'operations' ? styles.primaryButton : styles.secondaryButton} onPress={() => setActiveSection('operations')}>
+        <Text style={styles.buttonText}>Mantenimiento operativo</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={activeSection === 'reports' ? styles.primaryButton : styles.secondaryButton} onPress={() => setActiveSection('reports')}>
+        <Text style={styles.buttonText}>Reportes y consultas</Text>
+      </TouchableOpacity>
+
+      {activeSection === 'operations' ? (
+        <ComplexOperations styles={styles} selectedComplex={selectedComplex} />
+      ) : (
+        <ComplexReports styles={styles} selectedComplex={selectedComplex} />
+      )}
+
       <TouchableOpacity style={styles.secondaryButton} onPress={() => setSelectedComplex(null)}>
         <Text style={styles.buttonText}>Cambiar complejo</Text>
       </TouchableOpacity>
