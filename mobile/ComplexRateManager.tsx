@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ComboSelect from './ComboSelect';
+import DashboardCards from './DashboardCards';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -98,10 +99,29 @@ export default function ComplexRateManager({ styles, selectedComplex }: any) {
     }
   }
 
+  const filteredRates = selectedCourt
+    ? rates.filter((rate) => String(rate.court_id) === selectedCourt)
+    : rates;
+  const prices = filteredRates.map((rate) => Number(rate.price_per_hour)).filter((value) => !Number.isNaN(value));
+  const totalPotential = prices.reduce((sum, value) => sum + value, 0);
+  const averagePrice = prices.length ? Math.round(totalPotential / prices.length) : 0;
+  const minPrice = prices.length ? Math.min(...prices) : 0;
+  const maxPrice = prices.length ? Math.max(...prices) : 0;
+
   return (
     <View>
       <Text style={styles.title}>Tarifas por franja horaria</Text>
       <Text style={styles.subtitle}>Visualiza y administra disponibilidad y precios registrados.</Text>
+
+      <DashboardCards
+        styles={styles}
+        items={[
+          { label: 'Franjas con tarifa', value: filteredRates.length, description: selectedCourt ? 'Campo seleccionado' : 'Complejo seleccionado' },
+          { label: 'Tarifa promedio', value: `S/ ${averagePrice}`, description: 'Promedio de franjas filtradas' },
+          { label: 'Tarifa mínima', value: `S/ ${minPrice}`, description: 'Precio más bajo configurado' },
+          { label: 'Ingreso potencial', value: `S/ ${totalPotential}`, description: 'Suma de tarifas por franja' },
+        ]}
+      />
 
       <ComboSelect
         styles={styles}
@@ -153,7 +173,7 @@ export default function ComplexRateManager({ styles, selectedComplex }: any) {
       <Text style={styles.title}>Disponibilidad y precios registrados</Text>
 
       <ScrollView style={{ maxHeight: 320 }}>
-        {rates.map((rate, index) => {
+        {filteredRates.map((rate, index) => {
           const court = courts.find((item) => Number(item.id) === Number(rate.court_id));
 
           return (
