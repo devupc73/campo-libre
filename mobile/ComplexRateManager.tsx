@@ -4,45 +4,48 @@ import ComboSelect from './ComboSelect';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 
-export default function ComplexRateManager({ styles }: any) {
-  const [users, setUsers] = useState<any[]>([]);
+export default function ComplexRateManager({ styles, selectedComplex }: any) {
   const [courts, setCourts] = useState<any[]>([]);
-  const [selectedUser, setSelectedUser] = useState('');
   const [selectedCourt, setSelectedCourt] = useState('');
-  const [price, setPrice] = useState('');
-  const [description, setDescription] = useState('');
+  const [dayOfWeek, setDayOfWeek] = useState('1');
+  const [startTime, setStartTime] = useState('18:00:00');
+  const [endTime, setEndTime] = useState('19:00:00');
+  const [price, setPrice] = useState('120');
+  const [description, setDescription] = useState('Horario regular');
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    loadData();
+    loadCourts();
   }, []);
 
-  async function loadData() {
+  async function loadCourts() {
     try {
-      const usersResponse = await fetch(`${API_URL}/users/`);
       const courtsResponse = await fetch(`${API_URL}/courts/`);
-      setUsers(await usersResponse.json());
       setCourts(await courtsResponse.json());
     } catch {
-      setMessage('No se pudieron cargar usuarios/canchas');
+      setMessage('No se pudieron cargar las canchas');
     }
   }
 
   async function saveRate() {
     try {
-      const response = await fetch(`${API_URL}/user-rates/`, {
+      const response = await fetch(`${API_URL}/complex-admin/court-rates`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_id: Number(selectedUser),
+          complex_id: Number(selectedComplex?.id),
           court_id: Number(selectedCourt),
+          day_of_week: Number(dayOfWeek),
+          start_time: startTime,
+          end_time: endTime,
           price_per_hour: Number(price),
           description,
         }),
       });
 
       if (!response.ok) throw new Error();
-      setMessage('Tarifa diferenciada registrada');
+
+      setMessage('Tarifa por franja horaria registrada correctamente');
     } catch {
       setMessage('No se pudo registrar la tarifa');
     }
@@ -50,34 +53,49 @@ export default function ComplexRateManager({ styles }: any) {
 
   return (
     <View>
-      <Text style={styles.title}>Tarifas diferenciadas</Text>
-      <Text style={styles.subtitle}>Asignar tarifas especiales por usuario y cancha.</Text>
-
-      <ComboSelect
-        styles={styles}
-        label="Usuario"
-        value={selectedUser}
-        options={users.map((user) => ({
-          label: `${user.full_name} (${user.role})`,
-          value: String(user.id),
-        }))}
-        onChange={setSelectedUser}
-      />
+      <Text style={styles.title}>Tarifas por franja horaria</Text>
+      <Text style={styles.subtitle}>Configura tarifas diarias por cancha y ventana horaria.</Text>
 
       <ComboSelect
         styles={styles}
         label="Cancha"
         value={selectedCourt}
-        options={courts.map((court) => ({
-          label: court.name,
-          value: String(court.id),
-        }))}
+        options={courts
+          .filter((court) => Number(court.complex_id) === Number(selectedComplex?.id))
+          .map((court) => ({
+            label: `${court.name} - ${court.sport}`,
+            value: String(court.id),
+          }))}
         onChange={setSelectedCourt}
       />
 
       <TextInput
         style={styles.input}
-        placeholder="Precio especial por hora"
+        placeholder="Día 1=Lunes, 7=Domingo"
+        placeholderTextColor="#64748b"
+        value={dayOfWeek}
+        onChangeText={setDayOfWeek}
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Inicio HH:MM:SS"
+        placeholderTextColor="#64748b"
+        value={startTime}
+        onChangeText={setStartTime}
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Fin HH:MM:SS"
+        placeholderTextColor="#64748b"
+        value={endTime}
+        onChangeText={setEndTime}
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Tarifa por hora"
         placeholderTextColor="#64748b"
         value={price}
         onChangeText={setPrice}
@@ -92,7 +110,7 @@ export default function ComplexRateManager({ styles }: any) {
       />
 
       <TouchableOpacity style={styles.primaryButton} onPress={saveRate}>
-        <Text style={styles.buttonText}>Guardar tarifa diferenciada</Text>
+        <Text style={styles.buttonText}>Guardar tarifa</Text>
       </TouchableOpacity>
 
       {!!message && <Text style={styles.status}>{message}</Text>}
