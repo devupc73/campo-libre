@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ComboSelect from './ComboSelect';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
@@ -20,6 +20,7 @@ function dayName(day: number) {
 export default function ComplexRateManager({ styles, selectedComplex }: any) {
   const [courts, setCourts] = useState<any[]>([]);
   const [schedules, setSchedules] = useState<any[]>([]);
+  const [rates, setRates] = useState<any[]>([]);
   const [selectedCourt, setSelectedCourt] = useState('');
   const [selectedSchedule, setSelectedSchedule] = useState('');
   const [price, setPrice] = useState('120');
@@ -28,6 +29,7 @@ export default function ComplexRateManager({ styles, selectedComplex }: any) {
 
   useEffect(() => {
     loadCourts();
+    loadRates();
   }, [selectedComplex?.id]);
 
   async function loadCourts() {
@@ -36,7 +38,17 @@ export default function ComplexRateManager({ styles, selectedComplex }: any) {
       const data = await courtsResponse.json();
       setCourts(Array.isArray(data) ? data : []);
     } catch {
-      setMessage('No se pudieron cargar las canchas');
+      setMessage('No se pudieron cargar los campos');
+    }
+  }
+
+  async function loadRates() {
+    try {
+      const response = await fetch(`${API_URL}/complex-admin/court-rates/${selectedComplex?.id}`);
+      const data = await response.json();
+      setRates(Array.isArray(data) ? data : []);
+    } catch {
+      setRates([]);
     }
   }
 
@@ -80,6 +92,7 @@ export default function ComplexRateManager({ styles, selectedComplex }: any) {
       if (!response.ok) throw new Error();
 
       setMessage('Tarifa registrada para la franja seleccionada');
+      loadRates();
     } catch {
       setMessage('No se pudo registrar la tarifa');
     }
@@ -88,11 +101,11 @@ export default function ComplexRateManager({ styles, selectedComplex }: any) {
   return (
     <View>
       <Text style={styles.title}>Tarifas por franja horaria</Text>
-      <Text style={styles.subtitle}>Primero crea la disponibilidad. Luego selecciona cada franja y registra su tarifa.</Text>
+      <Text style={styles.subtitle}>Visualiza y administra disponibilidad y precios registrados.</Text>
 
       <ComboSelect
         styles={styles}
-        label="Cancha"
+        label="Campo"
         value={selectedCourt}
         options={courts
           .filter((court) => Number(court.complex_id) === Number(selectedComplex?.id))
@@ -136,6 +149,24 @@ export default function ComplexRateManager({ styles, selectedComplex }: any) {
       <TouchableOpacity style={styles.primaryButton} onPress={saveRate}>
         <Text style={styles.buttonText}>Guardar tarifa para esta franja</Text>
       </TouchableOpacity>
+
+      <Text style={styles.title}>Disponibilidad y precios registrados</Text>
+
+      <ScrollView style={{ maxHeight: 320 }}>
+        {rates.map((rate, index) => {
+          const court = courts.find((item) => Number(item.id) === Number(rate.court_id));
+
+          return (
+            <View key={`${rate.id}-${index}`} style={styles.card}>
+              <Text style={styles.cardTitle}>{court?.name || 'Campo'} - {court?.sport || ''}</Text>
+              <Text style={styles.moduleText}>{dayName(Number(rate.day_of_week))}</Text>
+              <Text style={styles.moduleText}>{rate.start_time} - {rate.end_time}</Text>
+              <Text style={styles.moduleText}>S/ {rate.price_per_hour}</Text>
+              <Text style={styles.moduleText}>{rate.description}</Text>
+            </View>
+          );
+        })}
+      </ScrollView>
 
       {!!message && <Text style={styles.status}>{message}</Text>}
     </View>
