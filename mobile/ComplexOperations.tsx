@@ -5,6 +5,12 @@ import ComplexRateManager from './ComplexRateManager';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 
+function addHour(time: string) {
+  const [h, m] = time.split(':').map(Number);
+  const next = h + 1;
+  return `${String(next).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
+}
+
 export default function ComplexOperations({ styles, selectedComplex }: any) {
   const [courts, setCourts] = useState<any[]>([]);
   const [courtId, setCourtId] = useState('');
@@ -12,21 +18,21 @@ export default function ComplexOperations({ styles, selectedComplex }: any) {
   const [sport, setSport] = useState('futbol');
   const [capacity, setCapacity] = useState('14');
   const [dayOfWeek, setDayOfWeek] = useState('1');
-  const [startTime, setStartTime] = useState('18:00:00');
-  const [endTime, setEndTime] = useState('23:00:00');
+  const [startTime, setStartTime] = useState('18:00');
+  const [endTime, setEndTime] = useState('23:00');
   const [message, setMessage] = useState('');
 
   useEffect(() => {
     loadCourts();
-  }, []);
+  }, [selectedComplex?.id]);
 
   async function loadCourts() {
     try {
-      const response = await fetch(`${API_URL}/courts/`);
+      const response = await fetch(`${API_URL}/courts?complex_id=${selectedComplex?.id}`);
       const data = await response.json();
       setCourts(Array.isArray(data) ? data : []);
     } catch {
-      setMessage('No se pudieron cargar los campos.');
+      setMessage('No se pudieron cargar los campos');
     }
   }
 
@@ -38,7 +44,6 @@ export default function ComplexOperations({ styles, selectedComplex }: any) {
   }
 
   async function saveCourt(update = false) {
-    setMessage(update ? 'Actualizando campo...' : 'Creando campo...');
     try {
       const payload = {
         complex_id: Number(selectedComplex?.id),
@@ -48,67 +53,114 @@ export default function ComplexOperations({ styles, selectedComplex }: any) {
         price_per_hour: 0,
       };
 
-      const url = update ? `${API_URL}/courts/${courtId}` : `${API_URL}/courts/`;
+      const response = await fetch(
+        update ? `${API_URL}/courts/${courtId}` : `${API_URL}/courts/`,
+        {
+          method: update ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+      );
 
-      const response = await fetch(url, {
-        method: update ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) throw new Error('court_failed');
+      if (!response.ok) throw new Error();
 
       const data = await response.json();
       setCourtId(String(data.id));
-      setMessage(update ? 'Campo actualizado correctamente.' : `Campo creado. ID ${data.id}`);
+      setMessage(update ? 'Campo actualizado' : 'Campo creado');
       loadCourts();
     } catch {
-      setMessage(update ? 'No se pudo actualizar el campo.' : 'No se pudo crear el campo.');
+      setMessage('No se pudo guardar el campo');
     }
   }
 
-  async function createSchedule() {
-    setMessage('Registrando disponibilidad...');
+  async function deleteCourt() {
     try {
-      const payload = {
-        court_id: Number(courtId),
-        day_of_week: Number(dayOfWeek),
-        start_time: startTime,
-        end_time: endTime,
-        price_per_hour: 0,
-      };
-
-      const response = await fetch(`${API_URL}/court-schedules`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+      await fetch(`${API_URL}/courts/${courtId}`, {
+        method: 'DELETE',
       });
 
-      if (!response.ok) throw new Error('schedule_failed');
-
-      setMessage('Disponibilidad registrada correctamente. Ahora configura las tarifas por franja horaria.');
+      setCourtId('');
+      setCourtName('Campo 1');
+      setSport('futbol');
+      setCapacity('14');
+      setMessage('Campo eliminado');
+      loadCourts();
     } catch {
-      setMessage('No se pudo registrar la disponibilidad.');
+      setMessage('No se pudo eliminar el campo');
+    }
+  }
+
+  async function generateSchedules() {
+    if (!courtId) {
+      setMessage('Selecciona o crea un campo primero');
+      return;
+    }
+
+    try {
+      let current = `${startTime}:00`;
+      const end = `${endTime}:00`;
+      let created = 0;
+
+      while (current < end) {
+        const next = addHour(current);
+
+        await fetch(`${API_URL}/court-schedules`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            court_id: Number(courtId),
+            day_of_week: Number(dayOfWeek),
+            start_time: current,
+            end_time: next,
+            price_per_hour: 0,
+          }),
+        });
+
+        current = next;
+        created += 1;
+      }
+
+      setMessage(`${created} franjas horarias generadas automáticamente`);
+    } catch {
+      setMessage('No se pudieron generar las franjas');
+    }
+  }
+
+  async function deleteComplex() {
+    try {
+      await fetch(`${API_URL}/sports-complexes/${selectedComplex?.id}`, {
+        method: 'DELETE',
+      });
+
+      setMessage('Complejo eliminado');
+    } catch {
+      setMessage('No se pudo eliminar el complejo');
     }
   }
 
   return (
     <View>
-      <Text style={styles.title}>Operación del complejo</Text>
-      <Text style={styles.subtitle}>Administra campos, disponibilidad y tarifas diarias por franja horaria.</Text>
+      <Text style={styles.title}>Administración operativa</Text>
+      <Text style={styles.subtitle}>Gestiona complejo, campos, horarios y tarifas.</Text>
 
-      <Text style={styles.subtitle}>Campos deportivos</Text>
+      <Text style={styles.title}>Complejo</Text>
+      <Text style={styles.subtitle}>{selectedComplex?.name}</Text>
+      <Text style={styles.moduleText}>{selectedComplex?.address}</Text>
+
+      <TouchableOpacity style={styles.secondaryButton} onPress={deleteComplex}>
+        <Text style={styles.buttonText}>Eliminar complejo</Text>
+      </TouchableOpacity>
+
+      <Text style={styles.title}>Campos deportivos</Text>
 
       <ComboSelect
         styles={styles}
-        label="Seleccionar campo existente"
+        label="Campo existente"
         value={courtId}
-        options={courts
-          .filter((court) => Number(court.complex_id) === Number(selectedComplex?.id))
-          .map((court) => ({
-            label: `${court.name} - ${court.sport}`,
-            value: String(court.id),
-          }))}
+        options={courts.map((court) => ({
+          label: `${court.name} - ${court.sport}`,
+          value: String(court.id),
+        }))}
         onChange={(value) => {
           const court = courts.find((item) => String(item.id) === value);
           if (court) fillCourt(court);
@@ -124,30 +176,22 @@ export default function ComplexOperations({ styles, selectedComplex }: any) {
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.secondaryButton} onPress={() => saveCourt(true)}>
-        <Text style={styles.buttonText}>Actualizar campo seleccionado</Text>
+        <Text style={styles.buttonText}>Actualizar campo</Text>
       </TouchableOpacity>
 
-      <Text style={styles.subtitle}>Disponibilidad semanal</Text>
+      <TouchableOpacity style={styles.secondaryButton} onPress={deleteCourt}>
+        <Text style={styles.buttonText}>Eliminar campo</Text>
+      </TouchableOpacity>
 
-      <ComboSelect
-        styles={styles}
-        label="Campo"
-        value={courtId}
-        options={courts
-          .filter((court) => Number(court.complex_id) === Number(selectedComplex?.id))
-          .map((court) => ({
-            label: `${court.name} - ${court.sport}`,
-            value: String(court.id),
-          }))}
-        onChange={setCourtId}
-      />
+      <Text style={styles.title}>Disponibilidad automática</Text>
+      <Text style={styles.subtitle}>El sistema generará automáticamente franjas de 1 hora.</Text>
 
-      <TextInput style={styles.input} placeholder="Día 1=Lunes, 7=Domingo" placeholderTextColor="#64748b" value={dayOfWeek} onChangeText={setDayOfWeek} />
-      <TextInput style={styles.input} placeholder="Inicio HH:MM:SS" placeholderTextColor="#64748b" value={startTime} onChangeText={setStartTime} />
-      <TextInput style={styles.input} placeholder="Fin HH:MM:SS" placeholderTextColor="#64748b" value={endTime} onChangeText={setEndTime} />
+      <TextInput style={styles.input} placeholder="Día 1=Lunes" placeholderTextColor="#64748b" value={dayOfWeek} onChangeText={setDayOfWeek} />
+      <TextInput style={styles.input} placeholder="Hora inicio HH:MM" placeholderTextColor="#64748b" value={startTime} onChangeText={setStartTime} />
+      <TextInput style={styles.input} placeholder="Hora fin HH:MM" placeholderTextColor="#64748b" value={endTime} onChangeText={setEndTime} />
 
-      <TouchableOpacity style={styles.primaryButton} onPress={createSchedule}>
-        <Text style={styles.buttonText}>Registrar disponibilidad</Text>
+      <TouchableOpacity style={styles.primaryButton} onPress={generateSchedules}>
+        <Text style={styles.buttonText}>Generar franjas automáticas</Text>
       </TouchableOpacity>
 
       <ComplexRateManager styles={styles} selectedComplex={selectedComplex} />
