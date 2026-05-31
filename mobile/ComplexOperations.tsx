@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ComboSelect from './ComboSelect';
 import ComplexRateManager from './ComplexRateManager';
+import DashboardCards from './DashboardCards';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -9,6 +10,12 @@ function addHour(time: string) {
   const [h, m] = time.split(':').map(Number);
   const next = h + 1;
   return `${String(next).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
+}
+
+function getRangeHours(startTime: string, endTime: string) {
+  const startHour = Number(startTime.split(':')[0]);
+  const endHour = Number(endTime.split(':')[0]);
+  return Math.max(endHour - startHour, 0);
 }
 
 export default function ComplexOperations({ styles, selectedComplex }: any) {
@@ -138,10 +145,39 @@ export default function ComplexOperations({ styles, selectedComplex }: any) {
     }
   }
 
+  const selectedCourt = courts.find((court) => String(court.id) === courtId);
+  const projectedSlots = getRangeHours(startTime, endTime);
+
   return (
     <View>
       <Text style={styles.title}>Administración operativa</Text>
       <Text style={styles.subtitle}>Gestiona complejo, campos, horarios y tarifas.</Text>
+
+      <DashboardCards
+        styles={styles}
+        items={[
+          {
+            label: 'Complejo activo',
+            value: selectedComplex?.name ? '1' : '0',
+            description: selectedComplex?.name || 'Sin complejo',
+          },
+          {
+            label: 'Campos registrados',
+            value: courts.length,
+            description: 'Campos del complejo seleccionado',
+          },
+          {
+            label: 'Campo seleccionado',
+            value: selectedCourt ? '1' : '0',
+            description: selectedCourt?.name || 'Selecciona un campo',
+          },
+          {
+            label: 'Franjas proyectadas',
+            value: projectedSlots,
+            description: `${startTime} a ${endTime}`,
+          },
+        ]}
+      />
 
       <Text style={styles.title}>Complejo</Text>
       <Text style={styles.subtitle}>{selectedComplex?.name}</Text>
