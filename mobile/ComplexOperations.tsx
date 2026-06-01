@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ComboSelect from './ComboSelect';
+import ComplexInfoEditor from './ComplexInfoEditor';
 import DashboardCards from './DashboardCards';
 import WeeklyScheduleCalendar from './WeeklyScheduleCalendar';
 
@@ -13,6 +14,7 @@ export default function ComplexOperations({ styles, selectedComplex }: any) {
   const [sport, setSport] = useState('futbol');
   const [capacity, setCapacity] = useState('14');
   const [message, setMessage] = useState('');
+  const [calendarEnabled, setCalendarEnabled] = useState(false);
 
   useEffect(() => {
     loadCourts();
@@ -33,6 +35,7 @@ export default function ComplexOperations({ styles, selectedComplex }: any) {
     setCourtName(court.name || '');
     setSport(court.sport || 'futbol');
     setCapacity(String(court.capacity || '14'));
+    setCalendarEnabled(false);
   }
 
   async function saveCourt(update = false) {
@@ -75,6 +78,7 @@ export default function ComplexOperations({ styles, selectedComplex }: any) {
       setCourtName('Campo 1');
       setSport('futbol');
       setCapacity('14');
+      setCalendarEnabled(false);
       setMessage('Campo eliminado');
       loadCourts();
     } catch {
@@ -121,15 +125,13 @@ export default function ComplexOperations({ styles, selectedComplex }: any) {
           },
           {
             label: 'Semana activa',
-            value: '7 días',
-            description: 'Calendario operativo semanal',
+            value: calendarEnabled ? 'Activa' : 'Pendiente',
+            description: 'Estado calendario semanal',
           },
         ]}
       />
 
-      <Text style={styles.title}>Complejo</Text>
-      <Text style={styles.subtitle}>{selectedComplex?.name}</Text>
-      <Text style={styles.moduleText}>{selectedComplex?.address}</Text>
+      <ComplexInfoEditor styles={styles} selectedComplex={selectedComplex} />
 
       <TouchableOpacity style={styles.secondaryButton} onPress={deleteComplex}>
         <Text style={styles.buttonText}>Eliminar complejo</Text>
@@ -167,7 +169,13 @@ export default function ComplexOperations({ styles, selectedComplex }: any) {
         <Text style={styles.buttonText}>Eliminar campo</Text>
       </TouchableOpacity>
 
-      {!!courtId && <WeeklyScheduleCalendar styles={styles} courtId={courtId} />}
+      {!!courtId && !calendarEnabled && (
+        <TouchableOpacity style={styles.primaryButton} onPress={() => setCalendarEnabled(true)}>
+          <Text style={styles.buttonText}>Abrir calendario semanal</Text>
+        </TouchableOpacity>
+      )}
+
+      {!!courtId && calendarEnabled && <WeeklyScheduleCalendar styles={styles} courtId={courtId} />}
 
       {!!message && <Text style={styles.status}>{message}</Text>}
     </View>
