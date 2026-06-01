@@ -55,6 +55,39 @@ export default function WeeklyScheduleCalendar({ styles, courtId }: any) {
     }
   }
 
+  async function updateDayStatus(day: number, status: 'active' | 'inactive') {
+    const daySlots = slots.filter((slot) => Number(slot.day_of_week) === day);
+
+    if (!daySlots.length) {
+      setMessage('Primero genera las franjas de la semana.');
+      return;
+    }
+
+    try {
+      await Promise.all(
+        daySlots.map((slot) =>
+          fetch(`${API_URL}/court-schedules/${slot.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              court_id: slot.court_id,
+              day_of_week: slot.day_of_week,
+              start_time: slot.start_time,
+              end_time: slot.end_time,
+              price_per_hour: slot.price_per_hour,
+              status,
+            }),
+          }),
+        ),
+      );
+
+      setMessage(status === 'active' ? 'Día activado correctamente' : 'Día desactivado correctamente');
+      loadSlots();
+    } catch {
+      setMessage('No se pudo actualizar el día completo');
+    }
+  }
+
   async function generateWeek() {
     try {
       for (let day = 1; day <= 7; day += 1) {
@@ -99,9 +132,15 @@ export default function WeeklyScheduleCalendar({ styles, courtId }: any) {
             <View style={{ width: 90 }}>
               <Text style={styles.moduleTitle}>Hora</Text>
             </View>
-            {DAYS.map((day) => (
-              <View key={day} style={{ width: 150, alignItems: 'center' }}>
+            {DAYS.map((day, index) => (
+              <View key={day} style={{ width: 150, alignItems: 'center', marginRight: 4 }}>
                 <Text style={styles.moduleTitle}>{day}</Text>
+                <TouchableOpacity style={[styles.secondaryButton, { paddingVertical: 6, paddingHorizontal: 6, marginTop: 6 }]} onPress={() => updateDayStatus(index + 1, 'inactive')}>
+                  <Text style={[styles.buttonText, { fontSize: 11 }]}>Desactivar día</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.secondaryButton, { paddingVertical: 6, paddingHorizontal: 6, marginTop: 4 }]} onPress={() => updateDayStatus(index + 1, 'active')}>
+                  <Text style={[styles.buttonText, { fontSize: 11 }]}>Activar día</Text>
+                </TouchableOpacity>
               </View>
             ))}
           </View>
