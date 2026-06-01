@@ -4,6 +4,7 @@ import CaptainDashboard from './CaptainDashboard';
 import ComboSelect from './ComboSelect';
 import ComplexAdminPortal from './ComplexAdminPortal';
 import DashboardCards from './DashboardCards';
+import SystemAdminKpis from './SystemAdminKpis';
 import SystemComplexManagement from './SystemComplexManagement';
 import UserManagement from './UserManagement';
 
@@ -148,7 +149,7 @@ export default function App() {
   } else if (screen === 'systemRegister') {
     content = <View style={styles.card}><Text style={styles.title}>Registro system_admin</Text><TextInput style={styles.input} placeholder="Nombre completo" placeholderTextColor="#64748b" value={fullName} onChangeText={setFullName} /><TextInput style={styles.input} placeholder="Email" placeholderTextColor="#64748b" value={email} onChangeText={setEmail} /><TextInput style={styles.input} placeholder="Password" placeholderTextColor="#64748b" value={password} onChangeText={setPassword} secureTextEntry /><TouchableOpacity style={styles.primaryButton} onPress={registerSystemAdmin}><Text style={styles.buttonText}>Registrar</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('portal')}><Text style={styles.buttonText}>Volver</Text></TouchableOpacity>{!!message && <Text style={styles.status}>{message}</Text>}</View>;
   } else if (screen === 'systemHome') {
-    content = <View style={styles.card}><Text style={styles.title}>Administrador del sistema</Text><Text style={styles.subtitle}>Bienvenido, {userName}</Text><DashboardCards styles={styles} items={[{ label: 'Usuario', value: userId, description: 'system_admin' }]} /><TouchableOpacity style={styles.moduleButton} onPress={() => setScreen('systemComplexes')}><Text style={styles.moduleTitle}>Gestionar complejos</Text></TouchableOpacity><TouchableOpacity style={styles.moduleButton} onPress={() => setScreen('systemUsers')}><Text style={styles.moduleTitle}>Gestionar usuarios</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={logout}><Text style={styles.buttonText}>Cerrar sesión</Text></TouchableOpacity></View>;
+    content = <View style={styles.card}><Text style={styles.title}>Administrador del sistema</Text><Text style={styles.subtitle}>Bienvenido, {userName}</Text><SystemAdminKpis styles={styles} /><TouchableOpacity style={styles.moduleButton} onPress={() => setScreen('systemComplexes')}><Text style={styles.moduleTitle}>Gestionar complejos</Text></TouchableOpacity><TouchableOpacity style={styles.moduleButton} onPress={() => setScreen('systemUsers')}><Text style={styles.moduleTitle}>Gestionar usuarios</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={logout}><Text style={styles.buttonText}>Cerrar sesión</Text></TouchableOpacity></View>;
   } else if (screen === 'systemComplexes') {
     content = <View style={styles.card}><SystemComplexManagement styles={styles} systemAdminId={userId} /><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('systemHome')}><Text style={styles.buttonText}>Volver</Text></TouchableOpacity></View>;
   } else if (screen === 'systemUsers') {
