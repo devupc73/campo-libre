@@ -25,12 +25,27 @@ def list_schedules(court_id: int | None = None):
 def create_schedule(payload: CourtScheduleCreate):
     db: Session = SessionLocal()
 
+    existing = db.query(CourtSchedule).filter(
+        CourtSchedule.court_id == payload.court_id,
+        CourtSchedule.day_of_week == payload.day_of_week,
+        CourtSchedule.start_time == payload.start_time,
+        CourtSchedule.end_time == payload.end_time,
+    ).first()
+
+    if existing:
+        existing.price_per_hour = payload.price_per_hour
+        existing.status = payload.status
+        db.commit()
+        db.refresh(existing)
+        return existing
+
     schedule = CourtSchedule(
         court_id=payload.court_id,
         day_of_week=payload.day_of_week,
         start_time=payload.start_time,
         end_time=payload.end_time,
         price_per_hour=payload.price_per_hour,
+        status=payload.status,
     )
 
     db.add(schedule)
@@ -54,6 +69,7 @@ def update_schedule(schedule_id: int, payload: CourtScheduleCreate):
     schedule.start_time = payload.start_time
     schedule.end_time = payload.end_time
     schedule.price_per_hour = payload.price_per_hour
+    schedule.status = payload.status
 
     db.commit()
     db.refresh(schedule)
