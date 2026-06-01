@@ -3,20 +3,9 @@ import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ComboSelect from './ComboSelect';
 import ComplexRateManager from './ComplexRateManager';
 import DashboardCards from './DashboardCards';
+import WeeklyScheduleCalendar from './WeeklyScheduleCalendar';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
-
-function addHour(time: string) {
-  const [h, m] = time.split(':').map(Number);
-  const next = h + 1;
-  return `${String(next).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
-}
-
-function getRangeHours(startTime: string, endTime: string) {
-  const startHour = Number(startTime.split(':')[0]);
-  const endHour = Number(endTime.split(':')[0]);
-  return Math.max(endHour - startHour, 0);
-}
 
 export default function ComplexOperations({ styles, selectedComplex }: any) {
   const [courts, setCourts] = useState<any[]>([]);
@@ -24,9 +13,6 @@ export default function ComplexOperations({ styles, selectedComplex }: any) {
   const [courtName, setCourtName] = useState('Campo 1');
   const [sport, setSport] = useState('futbol');
   const [capacity, setCapacity] = useState('14');
-  const [dayOfWeek, setDayOfWeek] = useState('1');
-  const [startTime, setStartTime] = useState('18:00');
-  const [endTime, setEndTime] = useState('23:00');
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -97,42 +83,6 @@ export default function ComplexOperations({ styles, selectedComplex }: any) {
     }
   }
 
-  async function generateSchedules() {
-    if (!courtId) {
-      setMessage('Selecciona o crea un campo primero');
-      return;
-    }
-
-    try {
-      let current = `${startTime}:00`;
-      const end = `${endTime}:00`;
-      let created = 0;
-
-      while (current < end) {
-        const next = addHour(current);
-
-        await fetch(`${API_URL}/court-schedules`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            court_id: Number(courtId),
-            day_of_week: Number(dayOfWeek),
-            start_time: current,
-            end_time: next,
-            price_per_hour: 0,
-          }),
-        });
-
-        current = next;
-        created += 1;
-      }
-
-      setMessage(`${created} franjas horarias generadas automáticamente`);
-    } catch {
-      setMessage('No se pudieron generar las franjas');
-    }
-  }
-
   async function deleteComplex() {
     try {
       await fetch(`${API_URL}/sports-complexes/${selectedComplex?.id}`, {
@@ -145,13 +95,12 @@ export default function ComplexOperations({ styles, selectedComplex }: any) {
     }
   }
 
-  const projectedSlots = getRangeHours(startTime, endTime);
-  const estimatedWeeklyOccupancy = Math.min(courts.length * projectedSlots * 5, 100);
+  const estimatedWeeklyOccupancy = Math.min(courts.length * 15 * 5, 100);
 
   return (
     <View>
       <Text style={styles.title}>Administración operativa</Text>
-      <Text style={styles.subtitle}>Gestiona campos, horarios y tarifas del complejo.</Text>
+      <Text style={styles.subtitle}>Gestiona campos, disponibilidad y tarifas del complejo.</Text>
 
       <DashboardCards
         styles={styles}
@@ -164,17 +113,17 @@ export default function ComplexOperations({ styles, selectedComplex }: any) {
           {
             label: 'Ocupabilidad semanal',
             value: `${estimatedWeeklyOccupancy}%`,
-            description: 'Estimación en base a franjas',
+            description: 'Estimación semanal',
           },
           {
-            label: 'Día con mayor ocupación',
+            label: 'Día pico',
             value: 'Viernes',
-            description: 'Mayor concentración estimada',
+            description: 'Mayor ocupación estimada',
           },
           {
-            label: 'Horas operativas',
-            value: projectedSlots,
-            description: `${startTime} a ${endTime}`,
+            label: 'Horario extendido',
+            value: '08:00-23:00',
+            description: 'Configuración semanal',
           },
         ]}
       />
@@ -219,18 +168,12 @@ export default function ComplexOperations({ styles, selectedComplex }: any) {
         <Text style={styles.buttonText}>Eliminar campo</Text>
       </TouchableOpacity>
 
-      <Text style={styles.title}>Disponibilidad automática</Text>
-      <Text style={styles.subtitle}>El sistema generará automáticamente franjas de 1 hora.</Text>
-
-      <TextInput style={styles.input} placeholder="Día 1=Lunes" placeholderTextColor="#64748b" value={dayOfWeek} onChangeText={setDayOfWeek} />
-      <TextInput style={styles.input} placeholder="Hora inicio HH:MM" placeholderTextColor="#64748b" value={startTime} onChangeText={setStartTime} />
-      <TextInput style={styles.input} placeholder="Hora fin HH:MM" placeholderTextColor="#64748b" value={endTime} onChangeText={setEndTime} />
-
-      <TouchableOpacity style={styles.primaryButton} onPress={generateSchedules}>
-        <Text style={styles.buttonText}>Generar franjas automáticas</Text>
-      </TouchableOpacity>
-
-      <ComplexRateManager styles={styles} selectedComplex={selectedComplex} />
+      {!!courtId && (
+        <>
+          <WeeklyScheduleCalendar styles={styles} courtId={courtId} />
+          <ComplexRateManager styles={styles} selectedComplex={selectedComplex} />
+        </>
+      )}
 
       {!!message && <Text style={styles.status}>{message}</Text>}
     </View>
