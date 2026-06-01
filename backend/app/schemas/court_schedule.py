@@ -9,6 +9,7 @@ class CourtScheduleBase(BaseModel):
     start_time: time
     end_time: time
     price_per_hour: float
+    status: str = 'active'
 
 
 class CourtScheduleCreate(CourtScheduleBase):
@@ -17,7 +18,6 @@ class CourtScheduleCreate(CourtScheduleBase):
 
 class CourtScheduleRead(CourtScheduleBase):
     id: int
-    status: str
 
     class Config:
         from_attributes = True
