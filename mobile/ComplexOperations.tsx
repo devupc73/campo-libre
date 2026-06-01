@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ComboSelect from './ComboSelect';
-import ComplexRateManager from './ComplexRateManager';
 import DashboardCards from './DashboardCards';
 import WeeklyScheduleCalendar from './WeeklyScheduleCalendar';
 
@@ -100,7 +99,7 @@ export default function ComplexOperations({ styles, selectedComplex }: any) {
   return (
     <View>
       <Text style={styles.title}>Administración operativa</Text>
-      <Text style={styles.subtitle}>Gestiona campos, disponibilidad y tarifas del complejo.</Text>
+      <Text style={styles.subtitle}>Gestiona campos y disponibilidad semanal del complejo.</Text>
 
       <DashboardCards
         styles={styles}
@@ -113,7 +112,7 @@ export default function ComplexOperations({ styles, selectedComplex }: any) {
           {
             label: 'Ocupabilidad semanal',
             value: `${estimatedWeeklyOccupancy}%`,
-            description: 'Estimación semanal',
+            description: 'Estimación semanal basada en calendario',
           },
           {
             label: 'Día pico',
@@ -121,9 +120,9 @@ export default function ComplexOperations({ styles, selectedComplex }: any) {
             description: 'Mayor ocupación estimada',
           },
           {
-            label: 'Horario extendido',
-            value: '08:00-23:00',
-            description: 'Configuración semanal',
+            label: 'Semana activa',
+            value: '7 días',
+            description: 'Calendario operativo semanal',
           },
         ]}
       />
@@ -168,12 +167,7 @@ export default function ComplexOperations({ styles, selectedComplex }: any) {
         <Text style={styles.buttonText}>Eliminar campo</Text>
       </TouchableOpacity>
 
-      {!!courtId && (
-        <>
-          <WeeklyScheduleCalendar styles={styles} courtId={courtId} />
-          <ComplexRateManager styles={styles} selectedComplex={selectedComplex} />
-        </>
-      )}
+      {!!courtId && <WeeklyScheduleCalendar styles={styles} courtId={courtId} />}
 
       {!!message && <Text style={styles.status}>{message}</Text>}
     </View>
