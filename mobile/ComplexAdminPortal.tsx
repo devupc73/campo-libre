@@ -3,7 +3,6 @@ import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ComplexOperations from './ComplexOperations';
 import ComplexReports from './ComplexReports';
 import ComplexSelector from './ComplexSelector';
-import DashboardCards from './DashboardCards';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -19,7 +18,7 @@ export default function ComplexAdminPortal({ styles, onLogout }: Props) {
   const [userName, setUserName] = useState('');
   const [assignedComplexes, setAssignedComplexes] = useState<any[]>([]);
   const [selectedComplex, setSelectedComplex] = useState<any>(null);
-  const [activeSection, setActiveSection] = useState<'operations' | 'reports'>('operations');
+  const [activeSection, setActiveSection] = useState<'operations' | 'reports'>('reports');
   const [message, setMessage] = useState('');
 
   function logoutLocal() {
@@ -29,7 +28,7 @@ export default function ComplexAdminPortal({ styles, onLogout }: Props) {
     setUserName('');
     setAssignedComplexes([]);
     setSelectedComplex(null);
-    setActiveSection('operations');
+    setActiveSection('reports');
     setMessage('');
     onLogout();
   }
@@ -92,7 +91,7 @@ export default function ComplexAdminPortal({ styles, onLogout }: Props) {
             complexes={assignedComplexes}
             onSelect={(complex: any) => {
               setSelectedComplex(complex);
-              setActiveSection('operations');
+              setActiveSection('reports');
             }}
           />
         ) : (
@@ -111,20 +110,13 @@ export default function ComplexAdminPortal({ styles, onLogout }: Props) {
   return (
     <View>
       <Text style={styles.title}>Administrador de complejo</Text>
-      <Text style={styles.subtitle}>Complejo seleccionado: {selectedComplex.name}</Text>
-      <DashboardCards
-        styles={styles}
-        items={[
-          { label: 'Complejo', value: selectedComplex.id, description: selectedComplex.address },
-          { label: 'Usuario', value: userId, description: userName },
-        ]}
-      />
+      <Text style={styles.subtitle}>{selectedComplex.name}</Text>
 
+      <TouchableOpacity style={activeSection === 'reports' ? styles.primaryButton : styles.secondaryButton} onPress={() => setActiveSection('reports')}>
+        <Text style={styles.buttonText}>Indicadores y consultas</Text>
+      </TouchableOpacity>
       <TouchableOpacity style={activeSection === 'operations' ? styles.primaryButton : styles.secondaryButton} onPress={() => setActiveSection('operations')}>
         <Text style={styles.buttonText}>Mantenimiento operativo</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={activeSection === 'reports' ? styles.primaryButton : styles.secondaryButton} onPress={() => setActiveSection('reports')}>
-        <Text style={styles.buttonText}>Reportes y consultas</Text>
       </TouchableOpacity>
 
       {activeSection === 'operations' ? (
