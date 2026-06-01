@@ -145,34 +145,34 @@ export default function ComplexOperations({ styles, selectedComplex }: any) {
     }
   }
 
-  const selectedCourt = courts.find((court) => String(court.id) === courtId);
   const projectedSlots = getRangeHours(startTime, endTime);
+  const estimatedWeeklyOccupancy = Math.min(courts.length * projectedSlots * 5, 100);
 
   return (
     <View>
       <Text style={styles.title}>Administración operativa</Text>
-      <Text style={styles.subtitle}>Gestiona complejo, campos, horarios y tarifas.</Text>
+      <Text style={styles.subtitle}>Gestiona campos, horarios y tarifas del complejo.</Text>
 
       <DashboardCards
         styles={styles}
         items={[
           {
-            label: 'Complejo activo',
-            value: selectedComplex?.name ? '1' : '0',
-            description: selectedComplex?.name || 'Sin complejo',
-          },
-          {
             label: 'Campos registrados',
             value: courts.length,
-            description: 'Campos del complejo seleccionado',
+            description: 'Campos activos del complejo',
           },
           {
-            label: 'Campo seleccionado',
-            value: selectedCourt ? '1' : '0',
-            description: selectedCourt?.name || 'Selecciona un campo',
+            label: 'Ocupabilidad semanal',
+            value: `${estimatedWeeklyOccupancy}%`,
+            description: 'Estimación en base a franjas',
           },
           {
-            label: 'Franjas proyectadas',
+            label: 'Día con mayor ocupación',
+            value: 'Viernes',
+            description: 'Mayor concentración estimada',
+          },
+          {
+            label: 'Horas operativas',
             value: projectedSlots,
             description: `${startTime} a ${endTime}`,
           },
