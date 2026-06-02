@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
@@ -17,18 +18,37 @@ def list_participants(match_id: int | None = None):
     if match_id:
         query = query.filter(MatchParticipant.match_id == match_id)
 
-    return query.all()
+    return query.order_by(MatchParticipant.participant_order.asc()).all()
 
 
 @router.post('')
 def join_match(payload: MatchParticipantCreate):
     db: Session = SessionLocal()
 
+    existing = db.query(MatchParticipant).filter(
+        MatchParticipant.match_id == payload.match_id,
+        MatchParticipant.user_id == payload.user_id,
+    ).first()
+
+    if existing:
+        return existing
+
     match = db.query(Match).filter(Match.id == payload.match_id).first()
-    current_players = db.query(MatchParticipant).filter(MatchParticipant.match_id == payload.match_id).count()
+
+    if not match:
+        raise HTTPException(status_code=404, detail='Convocatoria no encontrada')
+
+    confirmed_players = db.query(MatchParticipant).filter(
+        MatchParticipant.match_id == payload.match_id,
+        MatchParticipant.status == 'confirmed',
+    ).count()
+
+    total_players = db.query(MatchParticipant).filter(
+        MatchParticipant.match_id == payload.match_id,
+    ).count()
 
     status = 'confirmed'
-    if match and current_players >= match.max_players:
+    if confirmed_players >= match.max_players:
         status = 'waiting_list'
 
     participant = MatchParticipant(
@@ -37,9 +57,53 @@ def join_match(payload: MatchParticipantCreate):
         position=payload.position,
         skill_level=payload.skill_level,
         status=status,
+        participant_order=total_players + 1,
     )
 
     db.add(participant)
+    db.commit()
+    db.refresh(participant)
+
+    return participant
+
+
+@router.put('/{participant_id}/payment')
+def register_payment(participant_id: int, payload: dict):
+    db: Session = SessionLocal()
+
+    participant = db.query(MatchParticipant).filter(
+        MatchParticipant.id == participant_id
+    ).first()
+
+    if not participant:
+        raise HTTPException(status_code=404, detail='Participante no encontrado')
+
+    participant.payment_status = 'paid'
+    participant.payment_method = payload.get('payment_method', 'yape')
+    participant.paid_amount = payload.get('paid_amount', 0)
+
+    db.commit()
+    db.refresh(participant)
+
+    return participant
+
+
+@router.put('/{participant_id}/order')
+def update_order(participant_id: int, payload: dict):
+    db: Session = SessionLocal()
+
+    participant = db.query(MatchParticipant).filter(
+        MatchParticipant.id == participant_id
+    ).first()
+
+    if not participant:
+        raise HTTPException(status_code=404, detail='Participante no encontrado')
+
+    participant.participant_order = payload.get('participant_order', participant.participant_order)
+
+    if payload.get('status'):
+        participant.status = payload.get('status')
+
     db.commit()
     db.refresh(participant)
 
