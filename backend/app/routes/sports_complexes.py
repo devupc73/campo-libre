@@ -14,6 +14,8 @@ def apply_payload(complex_item: SportsComplex, payload: SportsComplexCreate):
     complex_item.address = payload.address
     complex_item.latitude = payload.latitude
     complex_item.longitude = payload.longitude
+    complex_item.system_admin_user_id = payload.system_admin_user_id
+    complex_item.complex_admin_user_id = payload.complex_admin_user_id
     complex_item.description = payload.description
     complex_item.phone = payload.phone
     complex_item.image_url = payload.image_url
