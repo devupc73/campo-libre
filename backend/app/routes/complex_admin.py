@@ -52,13 +52,23 @@ def create_admin_assignment(payload: dict):
         db.refresh(complex_item)
 
     try:
+        previous_assignments = db.query(ComplexAdminAssignment).filter(
+            ComplexAdminAssignment.complex_id == complex_id,
+            ComplexAdminAssignment.status == 'active',
+        ).all()
+
+        for assignment in previous_assignments:
+            assignment.status = 'inactive'
+
         existing = db.query(ComplexAdminAssignment).filter(
             ComplexAdminAssignment.complex_id == complex_id,
             ComplexAdminAssignment.admin_user_id == admin_user_id,
-            ComplexAdminAssignment.status == 'active',
         ).first()
 
         if existing:
+            existing.status = 'active'
+            db.commit()
+            db.refresh(existing)
             return existing
 
         entity = ComplexAdminAssignment(
