@@ -51,6 +51,10 @@ def join_match(payload: MatchParticipantCreate):
     if confirmed_players >= match.max_players:
         status = 'waiting_list'
 
+    payment_status = 'pending'
+    if float(payload.paid_amount or 0) > 0:
+        payment_status = 'paid'
+
     participant = MatchParticipant(
         match_id=payload.match_id,
         user_id=payload.user_id,
@@ -58,6 +62,9 @@ def join_match(payload: MatchParticipantCreate):
         skill_level=payload.skill_level,
         status=status,
         participant_order=total_players + 1,
+        payment_method=payload.payment_method,
+        paid_amount=payload.paid_amount,
+        payment_status=payment_status,
     )
 
     db.add(participant)
