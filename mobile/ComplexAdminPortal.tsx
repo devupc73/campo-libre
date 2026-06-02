@@ -34,9 +34,14 @@ export default function ComplexAdminPortal({ styles, onLogout }: Props) {
   }
 
   async function loadAssignedComplexes(adminUserId: string) {
-    const response = await fetch(`${API_URL}/complex-admin/complexes/${adminUserId}`);
-    const data = await response.json();
-    setAssignedComplexes(Array.isArray(data) ? data : []);
+    try {
+      const response = await fetch(`${API_URL}/complex-admin/complexes/${adminUserId}`);
+      const data = await response.json();
+      setAssignedComplexes(Array.isArray(data) ? data : []);
+    } catch {
+      setAssignedComplexes([]);
+      setMessage('No se pudieron cargar los complejos asignados.');
+    }
   }
 
   async function login() {
@@ -59,10 +64,11 @@ export default function ComplexAdminPortal({ styles, onLogout }: Props) {
 
       setUserId(String(data.user_id));
       setUserName(data.full_name);
-      await loadAssignedComplexes(String(data.user_id));
       setMessage('');
+
+      await loadAssignedComplexes(String(data.user_id));
     } catch {
-      setMessage('No se pudo iniciar sesión o cargar complejos asignados.');
+      setMessage('No se pudo iniciar sesión.');
     }
   }
 
