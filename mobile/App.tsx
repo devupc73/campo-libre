@@ -3,7 +3,7 @@ import { SafeAreaView, ScrollView, Text, TextInput, TouchableOpacity, View } fro
 import CaptainDashboard from './CaptainDashboard';
 import ComboSelect from './ComboSelect';
 import ComplexAdminPortal from './ComplexAdminPortal';
-import DashboardCards from './DashboardCards';
+import PlayerConvocations from './PlayerConvocations';
 import SystemAdminKpis from './SystemAdminKpis';
 import SystemComplexManagement from './SystemComplexManagement';
 import UserManagement from './UserManagement';
@@ -42,6 +42,7 @@ const styles = {
   moduleText: { color: '#cbd5e1', fontSize: 14, marginTop: 4 },
   muted: { color: '#94a3b8', fontSize: 14, textAlign: 'center' as const, marginTop: 14 },
   status: { color: '#fde68a', fontSize: 14, textAlign: 'center' as const, marginTop: 14 },
+  cardTitle: { color: '#fff', fontWeight: 'bold' as const, fontSize: 18, marginBottom: 6 },
 };
 
 export default function App() {
@@ -52,6 +53,9 @@ export default function App() {
   const [userName, setUserName] = useState('');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [bankAccount, setBankAccount] = useState('');
+  const [interbankAccount, setInterbankAccount] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
 
@@ -106,7 +110,15 @@ export default function App() {
       const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ full_name: fullName, email, phone: '', role, password }),
+        body: JSON.stringify({
+          full_name: fullName,
+          email,
+          phone,
+          bank_account: bankAccount,
+          interbank_account: interbankAccount,
+          role,
+          password,
+        }),
       });
       if (!response.ok) throw new Error();
       setMessage('Usuario registrado. Ahora inicia sesión.');
@@ -145,7 +157,7 @@ export default function App() {
   } else if (screen === 'login') {
     content = <View style={styles.card}><Text style={styles.title}>Login</Text><TextInput style={styles.input} placeholder="Email" placeholderTextColor="#64748b" value={email} onChangeText={setEmail} /><TextInput style={styles.input} placeholder="Password" placeholderTextColor="#64748b" value={password} onChangeText={setPassword} secureTextEntry /><TouchableOpacity style={styles.primaryButton} onPress={login}><Text style={styles.buttonText}>Entrar</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('portal')}><Text style={styles.buttonText}>Volver</Text></TouchableOpacity>{!!message && <Text style={styles.status}>{message}</Text>}</View>;
   } else if (screen === 'register') {
-    content = <View style={styles.card}><Text style={styles.title}>Registro público</Text><TextInput style={styles.input} placeholder="Nombre completo" placeholderTextColor="#64748b" value={fullName} onChangeText={setFullName} /><TextInput style={styles.input} placeholder="Email" placeholderTextColor="#64748b" value={email} onChangeText={setEmail} /><TextInput style={styles.input} placeholder="Password" placeholderTextColor="#64748b" value={password} onChangeText={setPassword} secureTextEntry /><ComboSelect styles={styles} label="Tipo de cuenta" value={role} options={roleOptions} onChange={(value) => setRole(value as Role)} /><TouchableOpacity style={styles.primaryButton} onPress={registerPublic}><Text style={styles.buttonText}>Registrarme</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('portal')}><Text style={styles.buttonText}>Volver</Text></TouchableOpacity>{!!message && <Text style={styles.status}>{message}</Text>}</View>;
+    content = <View style={styles.card}><Text style={styles.title}>Registro público</Text><TextInput style={styles.input} placeholder="Nombre completo" placeholderTextColor="#64748b" value={fullName} onChangeText={setFullName} /><TextInput style={styles.input} placeholder="Email" placeholderTextColor="#64748b" value={email} onChangeText={setEmail} /><TextInput style={styles.input} placeholder="Celular / Yape" placeholderTextColor="#64748b" value={phone} onChangeText={setPhone} /><TextInput style={styles.input} placeholder="Cuenta bancaria" placeholderTextColor="#64748b" value={bankAccount} onChangeText={setBankAccount} /><TextInput style={styles.input} placeholder="Cuenta interbancaria" placeholderTextColor="#64748b" value={interbankAccount} onChangeText={setInterbankAccount} /><TextInput style={styles.input} placeholder="Password" placeholderTextColor="#64748b" value={password} onChangeText={setPassword} secureTextEntry /><ComboSelect styles={styles} label="Tipo de cuenta" value={role} options={roleOptions} onChange={(value) => setRole(value as Role)} /><TouchableOpacity style={styles.primaryButton} onPress={registerPublic}><Text style={styles.buttonText}>Registrarme</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('portal')}><Text style={styles.buttonText}>Volver</Text></TouchableOpacity>{!!message && <Text style={styles.status}>{message}</Text>}</View>;
   } else if (screen === 'systemRegister') {
     content = <View style={styles.card}><Text style={styles.title}>Registro system_admin</Text><TextInput style={styles.input} placeholder="Nombre completo" placeholderTextColor="#64748b" value={fullName} onChangeText={setFullName} /><TextInput style={styles.input} placeholder="Email" placeholderTextColor="#64748b" value={email} onChangeText={setEmail} /><TextInput style={styles.input} placeholder="Password" placeholderTextColor="#64748b" value={password} onChangeText={setPassword} secureTextEntry /><TouchableOpacity style={styles.primaryButton} onPress={registerSystemAdmin}><Text style={styles.buttonText}>Registrar</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('portal')}><Text style={styles.buttonText}>Volver</Text></TouchableOpacity>{!!message && <Text style={styles.status}>{message}</Text>}</View>;
   } else if (screen === 'systemHome') {
@@ -157,7 +169,7 @@ export default function App() {
   } else if (screen === 'captainHome') {
     content = <View style={styles.card}><CaptainDashboard styles={styles} userId={userId} onBack={() => setScreen('captainHome')} /><TouchableOpacity style={styles.secondaryButton} onPress={logout}><Text style={styles.buttonText}>Cerrar sesión</Text></TouchableOpacity></View>;
   } else if (screen === 'playerHome') {
-    content = <View style={styles.card}><Text style={styles.title}>Jugador participante</Text><Text style={styles.subtitle}>Bienvenido, {userName}</Text><Text style={styles.moduleText}>Este perfil participa en partidos creados por un capitán.</Text><TouchableOpacity style={styles.secondaryButton} onPress={logout}><Text style={styles.buttonText}>Cerrar sesión</Text></TouchableOpacity></View>;
+    content = <View style={styles.card}><PlayerConvocations styles={styles} userId={userId} /><TouchableOpacity style={styles.secondaryButton} onPress={logout}><Text style={styles.buttonText}>Cerrar sesión</Text></TouchableOpacity></View>;
   }
 
   return <SafeAreaView style={styles.page}><ScrollView contentContainerStyle={styles.container}>{content}</ScrollView></SafeAreaView>;
