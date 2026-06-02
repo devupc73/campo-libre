@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import CaptainOfficialAssociation from './CaptainOfficialAssociation';
 import DashboardCards from './DashboardCards';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
@@ -94,6 +95,12 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
     }
   }
 
+  async function afterOfficialAssociationSaved(updatedMatch: any) {
+    setSelectedMatch(updatedMatch);
+    await loadMatches();
+    await openMatch(updatedMatch);
+  }
+
   return (
     <ScrollView>
       <Text style={styles.title}>Capitán / gestor del equipo</Text>
@@ -132,11 +139,19 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
           <Text style={styles.moduleText}>Lugar: {match.tentative_location || '-'}</Text>
           <Text style={styles.moduleText}>Jugadores: {match.max_players}</Text>
           <Text style={styles.moduleText}>Aporte: S/ {match.player_fee}</Text>
+          <Text style={styles.moduleText}>Estado campo: {match.court_id ? 'Asociado oficialmente' : 'Pendiente'}</Text>
         </TouchableOpacity>
       ))}
 
       {!!selectedMatch && (
         <View>
+          <CaptainOfficialAssociation
+            styles={styles}
+            userId={userId}
+            selectedMatch={selectedMatch}
+            onSaved={afterOfficialAssociationSaved}
+          />
+
           <Text style={styles.title}>Participantes</Text>
 
           {participants.map((participant) => (
