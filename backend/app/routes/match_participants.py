@@ -52,6 +52,7 @@ def join_match(payload: MatchParticipantCreate):
         status = 'waiting_list'
 
     payment_status = 'pending'
+    validation_status = 'pending_validation'
     if float(payload.paid_amount or 0) > 0:
         payment_status = 'paid'
 
@@ -65,6 +66,9 @@ def join_match(payload: MatchParticipantCreate):
         payment_method=payload.payment_method,
         paid_amount=payload.paid_amount,
         payment_status=payment_status,
+        payment_operation_code=payload.payment_operation_code,
+        payment_receipt_url=payload.payment_receipt_url,
+        payment_validation_status=validation_status,
     )
 
     db.add(participant)
@@ -88,6 +92,36 @@ def register_payment(participant_id: int, payload: dict):
     participant.payment_status = 'paid'
     participant.payment_method = payload.get('payment_method', 'yape')
     participant.paid_amount = payload.get('paid_amount', 0)
+    participant.payment_operation_code = payload.get('payment_operation_code')
+    participant.payment_receipt_url = payload.get('payment_receipt_url')
+    participant.payment_validation_status = 'pending_validation'
+
+    db.commit()
+    db.refresh(participant)
+
+    return participant
+
+
+@router.put('/{participant_id}/payment-validation')
+def validate_payment(participant_id: int, payload: dict):
+    db: Session = SessionLocal()
+
+    participant = db.query(MatchParticipant).filter(
+        MatchParticipant.id == participant_id
+    ).first()
+
+    if not participant:
+        raise HTTPException(status_code=404, detail='Participante no encontrado')
+
+    validation_status = payload.get('payment_validation_status')
+    if validation_status not in ['validated', 'observed', 'rejected', 'pending_validation']:
+        raise HTTPException(status_code=400, detail='Estado de validación inválido')
+
+    participant.payment_validation_status = validation_status
+
+    if validation_status == 'rejected':
+        participant.payment_status = 'pending'
+        participant.paid_amount = 0
 
     db.commit()
     db.refresh(participant)
