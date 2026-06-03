@@ -8,12 +8,15 @@ class MatchParticipantCreate(BaseModel):
     skill_level: int = 3
     payment_method: str | None = None
     paid_amount: float = 0
+    payment_operation_code: str | None = None
+    payment_receipt_url: str | None = None
 
 
 class MatchParticipantRead(MatchParticipantCreate):
     id: int
     status: str
     payment_status: str
+    payment_validation_status: str
     participant_order: int
 
     class Config:
