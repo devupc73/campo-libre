@@ -18,6 +18,7 @@ from app.models.wallet import WalletMovement
 from app.routes.auth import router as auth_router
 from app.routes.availability import router as availability_router
 from app.routes.complex_admin import router as complex_admin_router
+from app.routes.court_schedule_batch import router as court_schedule_batch_router
 from app.routes.court_schedules import router as court_schedules_router
 from app.routes.courts import router as courts_router
 from app.routes.health import router as health_router
@@ -49,6 +50,7 @@ app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(courts_router)
 app.include_router(court_schedules_router)
+app.include_router(court_schedule_batch_router)
 app.include_router(reservations_router)
 app.include_router(sports_complexes_router)
 app.include_router(availability_router)
