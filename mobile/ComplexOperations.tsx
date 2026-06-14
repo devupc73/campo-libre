@@ -3,7 +3,7 @@ import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ComboSelect from './ComboSelect';
 import ComplexInfoEditor from './ComplexInfoEditor';
 import DashboardCards from './DashboardCards';
-import WeeklyScheduleCalendar from './WeeklyScheduleCalendar';
+import WeeklyScheduleCalendarStable from './WeeklyScheduleCalendarStable';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -175,7 +175,7 @@ export default function ComplexOperations({ styles, selectedComplex }: any) {
         </TouchableOpacity>
       )}
 
-      {!!courtId && calendarEnabled && <WeeklyScheduleCalendar styles={styles} courtId={courtId} />}
+      {!!courtId && calendarEnabled && <WeeklyScheduleCalendarStable styles={styles} courtId={courtId} />}
 
       {!!message && <Text style={styles.status}>{message}</Text>}
     </View>
