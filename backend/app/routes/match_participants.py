@@ -10,6 +10,19 @@ from app.schemas.match_participant import MatchParticipantCreate
 router = APIRouter(prefix='/match-participants', tags=['match-participants'])
 
 
+def refresh_match_amounts(db: Session, match_id: int):
+    match = db.query(Match).filter(Match.id == match_id).first()
+    if not match:
+        return
+
+    participants = db.query(MatchParticipant).filter(
+        MatchParticipant.match_id == match_id
+    ).all()
+    collected = sum(float(p.paid_amount or 0) for p in participants if p.payment_status == 'paid')
+    match.collected_amount = collected
+    match.accumulated_fund = collected - float(match.paid_to_complex or 0)
+
+
 @router.get('')
 def list_participants(match_id: int | None = None):
     db: Session = SessionLocal()
@@ -31,6 +44,16 @@ def join_match(payload: MatchParticipantCreate):
     ).first()
 
     if existing:
+        if float(payload.paid_amount or 0) > 0:
+            existing.payment_status = 'paid'
+            existing.payment_method = payload.payment_method or existing.payment_method
+            existing.paid_amount = payload.paid_amount
+            existing.payment_operation_code = payload.payment_operation_code
+            existing.payment_receipt_url = payload.payment_receipt_url
+            existing.payment_validation_status = 'pending_validation'
+            refresh_match_amounts(db, payload.match_id)
+            db.commit()
+            db.refresh(existing)
         return existing
 
     match = db.query(Match).filter(Match.id == payload.match_id).first()
@@ -75,6 +98,10 @@ def join_match(payload: MatchParticipantCreate):
     db.commit()
     db.refresh(participant)
 
+    refresh_match_amounts(db, payload.match_id)
+    db.commit()
+    db.refresh(participant)
+
     return participant
 
 
@@ -96,6 +123,7 @@ def register_payment(participant_id: int, payload: dict):
     participant.payment_receipt_url = payload.get('payment_receipt_url')
     participant.payment_validation_status = 'pending_validation'
 
+    refresh_match_amounts(db, participant.match_id)
     db.commit()
     db.refresh(participant)
 
@@ -123,6 +151,7 @@ def validate_payment(participant_id: int, payload: dict):
         participant.payment_status = 'pending'
         participant.paid_amount = 0
 
+    refresh_match_amounts(db, participant.match_id)
     db.commit()
     db.refresh(participant)
 
