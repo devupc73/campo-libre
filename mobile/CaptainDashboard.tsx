@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import CaptainOfficialAssociation from './CaptainOfficialAssociation';
+import CaptainPaymentValidationSummary from './CaptainPaymentValidationSummary';
 import DashboardCards from './DashboardCards';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
@@ -169,6 +170,8 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
           { label: 'Pagos validados', value: validatedPayments.length, description: 'Aprobados por el capitán' },
         ]}
       />
+
+      <CaptainPaymentValidationSummary styles={styles} matches={matches} onOpenMatch={openMatch} />
 
       <Text style={styles.title}>Nueva convocatoria</Text>
 
