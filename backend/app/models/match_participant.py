@@ -15,6 +15,7 @@ class MatchParticipant(Base):
     payment_status = Column(String, default='pending')
     payment_method = Column(String, nullable=True)
     paid_amount = Column(Float, default=0)
+    paid_players_count = Column(Integer, default=1)
     payment_operation_code = Column(String, nullable=True)
     payment_receipt_url = Column(String, nullable=True)
     payment_validation_status = Column(String, default='pending_validation')
