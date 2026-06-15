@@ -82,6 +82,18 @@ export default function App() {
     setScreen('portal');
   }
 
+  async function checkBackendConnection() {
+    setMessage('Comprobando conexión con backend...');
+    try {
+      const response = await fetch(`${API_URL}/health`);
+      if (!response.ok) throw new Error();
+      const data = await response.json();
+      setMessage(`Backend conectado: ${data.application || 'campo-libre-api'} (${data.status || 'ok'})`);
+    } catch {
+      setMessage(`No se pudo conectar con el backend: ${API_URL}`);
+    }
+  }
+
   async function login() {
     setMessage('Iniciando sesión...');
     try {
@@ -154,7 +166,7 @@ export default function App() {
   } else if (screen === 'portal' && portal === 'general') {
     content = <View style={styles.card}><Text style={styles.title}>Jugadores y capitanes</Text><Text style={styles.subtitle}>URL: /general</Text><TouchableOpacity style={styles.primaryButton} onPress={() => setScreen('login')}><Text style={styles.buttonText}>Ingresar</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('register')}><Text style={styles.buttonText}>Registrarme</Text></TouchableOpacity></View>;
   } else if (screen === 'portal' && portal === 'system') {
-    content = <View style={styles.card}><Text style={styles.title}>Administrador del sistema</Text><Text style={styles.subtitle}>URL: /admin-system</Text><TouchableOpacity style={styles.primaryButton} onPress={() => setScreen('login')}><Text style={styles.buttonText}>Ingresar</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('systemRegister')}><Text style={styles.buttonText}>Registrar administrador del sistema</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={goHome}><Text style={styles.buttonText}>Volver a inicio</Text></TouchableOpacity></View>;
+    content = <View style={styles.card}><Text style={styles.title}>Administrador del sistema</Text><Text style={styles.subtitle}>URL: /admin-system</Text><TouchableOpacity style={styles.primaryButton} onPress={() => setScreen('login')}><Text style={styles.buttonText}>Ingresar</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('systemRegister')}><Text style={styles.buttonText}>Registrar administrador del sistema</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={checkBackendConnection}><Text style={styles.buttonText}>Comprobar conexión backend</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={goHome}><Text style={styles.buttonText}>Volver a inicio</Text></TouchableOpacity>{!!message && <Text style={styles.status}>{message}</Text>}</View>;
   } else if (screen === 'login') {
     content = <View style={styles.card}><Text style={styles.title}>Login</Text><TextInput style={styles.input} placeholder="Email" placeholderTextColor="#64748b" value={email} onChangeText={setEmail} /><TextInput style={styles.input} placeholder="Password" placeholderTextColor="#64748b" value={password} onChangeText={setPassword} secureTextEntry /><TouchableOpacity style={styles.primaryButton} onPress={login}><Text style={styles.buttonText}>Entrar</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('portal')}><Text style={styles.buttonText}>Volver</Text></TouchableOpacity>{!!message && <Text style={styles.status}>{message}</Text>}</View>;
   } else if (screen === 'register') {
