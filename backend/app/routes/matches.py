@@ -14,13 +14,13 @@ def build_match_summary(match: Match, participants: list[MatchParticipant]):
     confirmed = [p for p in participants if p.status == 'confirmed']
     reserves = [p for p in participants if p.status == 'waiting_list']
     paid = [p for p in participants if p.payment_status == 'paid']
-    validated = [p for p in participants if p.payment_validation_status == 'validated']
+    validated = [p for p in participants if p.payment_status == 'paid' and p.payment_validation_status == 'validated']
     pending_validation = [p for p in participants if p.payment_validation_status == 'pending_validation' and p.payment_status == 'paid']
-    collected = sum(float(p.paid_amount or 0) for p in participants if p.payment_status == 'paid')
+    declared_collected = sum(float(p.paid_amount or 0) for p in paid)
     validated_collected = sum(float(p.paid_amount or 0) for p in validated)
-    fund = collected - float(match.paid_to_complex or 0)
+    fund = validated_collected - float(match.paid_to_complex or 0)
 
-    match.collected_amount = collected
+    match.collected_amount = validated_collected
     match.accumulated_fund = fund
 
     return {
@@ -35,7 +35,8 @@ def build_match_summary(match: Match, participants: list[MatchParticipant]):
         'match_time': match.match_time,
         'payment_deadline': match.payment_deadline,
         'player_fee': match.player_fee,
-        'collected_amount': collected,
+        'collected_amount': validated_collected,
+        'declared_collected_amount': declared_collected,
         'validated_collected_amount': validated_collected,
         'paid_to_complex': match.paid_to_complex,
         'accumulated_fund': fund,
