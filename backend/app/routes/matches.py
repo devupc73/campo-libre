@@ -10,16 +10,69 @@ from app.schemas.match import MatchCreate
 router = APIRouter(prefix='/matches', tags=['matches'])
 
 
+def build_match_summary(match: Match, participants: list[MatchParticipant]):
+    confirmed = [p for p in participants if p.status == 'confirmed']
+    reserves = [p for p in participants if p.status == 'waiting_list']
+    paid = [p for p in participants if p.payment_status == 'paid']
+    validated = [p for p in participants if p.payment_validation_status == 'validated']
+    pending_validation = [p for p in participants if p.payment_validation_status == 'pending_validation' and p.payment_status == 'paid']
+    collected = sum(float(p.paid_amount or 0) for p in participants if p.payment_status == 'paid')
+    validated_collected = sum(float(p.paid_amount or 0) for p in validated)
+    fund = collected - float(match.paid_to_complex or 0)
+
+    match.collected_amount = collected
+    match.accumulated_fund = fund
+
+    return {
+        'id': match.id,
+        'reservation_id': match.reservation_id,
+        'captain_user_id': match.captain_user_id,
+        'title': match.title,
+        'sport': match.sport,
+        'max_players': match.max_players,
+        'tentative_location': match.tentative_location,
+        'match_date': match.match_date,
+        'match_time': match.match_time,
+        'payment_deadline': match.payment_deadline,
+        'player_fee': match.player_fee,
+        'collected_amount': collected,
+        'validated_collected_amount': validated_collected,
+        'paid_to_complex': match.paid_to_complex,
+        'accumulated_fund': fund,
+        'sports_complex_id': match.sports_complex_id,
+        'court_id': match.court_id,
+        'schedule_id': match.schedule_id,
+        'status': match.status,
+        'total_players': len(participants),
+        'confirmed_players': len(confirmed),
+        'reserve_players': len(reserves),
+        'paid_players': len(paid),
+        'validated_paid_players': len(validated),
+        'pending_validation_players': len(pending_validation),
+        'available_slots': max(int(match.max_players or 0) - len(confirmed), 0),
+        'occupancy_percentage': round((len(confirmed) / max(int(match.max_players or 1), 1)) * 100, 2),
+    }
+
+
 @router.get('')
 def list_matches(captain_user_id: int | None = None):
     db: Session = SessionLocal()
-
     query = db.query(Match)
 
     if captain_user_id:
         query = query.filter(Match.captain_user_id == captain_user_id)
 
-    return query.all()
+    matches = query.all()
+    result = []
+
+    for match in matches:
+        participants = db.query(MatchParticipant).filter(
+            MatchParticipant.match_id == match.id
+        ).all()
+        result.append(build_match_summary(match, participants))
+
+    db.commit()
+    return result
 
 
 @router.get('/{match_id}/summary')
@@ -34,29 +87,10 @@ def get_match_summary(match_id: int):
         MatchParticipant.match_id == match_id
     ).all()
 
-    confirmed = [p for p in participants if p.status == 'confirmed']
-    reserves = [p for p in participants if p.status == 'waiting_list']
-    paid = [p for p in participants if p.payment_status == 'paid']
-
-    collected = sum(float(p.paid_amount or 0) for p in participants)
-    fund = collected - float(match.paid_to_complex or 0)
-
-    match.collected_amount = collected
-    match.accumulated_fund = fund
+    summary = build_match_summary(match, participants)
+    summary['match_id'] = match.id
     db.commit()
-
-    return {
-        'match_id': match.id,
-        'title': match.title,
-        'confirmed_players': len(confirmed),
-        'reserve_players': len(reserves),
-        'paid_players': len(paid),
-        'pending_players': len(participants) - len(paid),
-        'collected_amount': collected,
-        'paid_to_complex': match.paid_to_complex,
-        'accumulated_fund': fund,
-        'occupancy_percentage': round((len(confirmed) / max(match.max_players, 1)) * 100, 2),
-    }
+    return summary
 
 
 @router.post('')
