@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
-import ComplexOperations from './ComplexOperations';
+import ComplexCalendarPage from './ComplexCalendarPage';
+import ComplexDashboardPage from './ComplexDashboardPage';
+import ComplexFieldsPage from './ComplexFieldsPage';
 import ComplexReports from './ComplexReports';
 import ComplexSelector from './ComplexSelector';
+import ComplexSettingsPage from './ComplexSettingsPage';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -11,6 +14,8 @@ type Props = {
   onLogout: () => void;
 };
 
+type Section = 'dashboard' | 'settings' | 'fields' | 'calendar' | 'reports';
+
 export default function ComplexAdminPortal({ styles, onLogout }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,7 +23,8 @@ export default function ComplexAdminPortal({ styles, onLogout }: Props) {
   const [userName, setUserName] = useState('');
   const [assignedComplexes, setAssignedComplexes] = useState<any[]>([]);
   const [selectedComplex, setSelectedComplex] = useState<any>(null);
-  const [activeSection, setActiveSection] = useState<'operations' | 'reports'>('reports');
+  const [activeSection, setActiveSection] = useState<Section>('dashboard');
+  const [selectedCourtId, setSelectedCourtId] = useState('');
   const [message, setMessage] = useState('');
 
   function logoutLocal() {
@@ -28,7 +34,8 @@ export default function ComplexAdminPortal({ styles, onLogout }: Props) {
     setUserName('');
     setAssignedComplexes([]);
     setSelectedComplex(null);
-    setActiveSection('reports');
+    setActiveSection('dashboard');
+    setSelectedCourtId('');
     setMessage('');
     onLogout();
   }
@@ -65,11 +72,26 @@ export default function ComplexAdminPortal({ styles, onLogout }: Props) {
       setUserId(String(data.user_id));
       setUserName(data.full_name);
       setMessage('');
-
       await loadAssignedComplexes(String(data.user_id));
     } catch {
       setMessage('No se pudo iniciar sesión.');
     }
+  }
+
+  function renderSection() {
+    if (activeSection === 'settings') {
+      return <ComplexSettingsPage styles={styles} selectedComplex={selectedComplex} />;
+    }
+    if (activeSection === 'fields') {
+      return <ComplexFieldsPage styles={styles} selectedComplex={selectedComplex} selectedCourtId={selectedCourtId} onSelectCourt={setSelectedCourtId} />;
+    }
+    if (activeSection === 'calendar') {
+      return <ComplexCalendarPage styles={styles} courtId={selectedCourtId} />;
+    }
+    if (activeSection === 'reports') {
+      return <ComplexReports styles={styles} selectedComplex={selectedComplex} />;
+    }
+    return <ComplexDashboardPage styles={styles} selectedComplex={selectedComplex} onNavigate={setActiveSection} />;
   }
 
   if (!userId) {
@@ -97,7 +119,8 @@ export default function ComplexAdminPortal({ styles, onLogout }: Props) {
             complexes={assignedComplexes}
             onSelect={(complex: any) => {
               setSelectedComplex(complex);
-              setActiveSection('reports');
+              setActiveSection('dashboard');
+              setSelectedCourtId('');
             }}
           />
         ) : (
@@ -118,18 +141,23 @@ export default function ComplexAdminPortal({ styles, onLogout }: Props) {
       <Text style={styles.title}>Administrador de complejo</Text>
       <Text style={styles.subtitle}>{selectedComplex.name}</Text>
 
-      <TouchableOpacity style={activeSection === 'reports' ? styles.primaryButton : styles.secondaryButton} onPress={() => setActiveSection('reports')}>
-        <Text style={styles.buttonText}>Indicadores y consultas</Text>
+      <TouchableOpacity style={activeSection === 'dashboard' ? styles.primaryButton : styles.secondaryButton} onPress={() => setActiveSection('dashboard')}>
+        <Text style={styles.buttonText}>Dashboard</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={activeSection === 'operations' ? styles.primaryButton : styles.secondaryButton} onPress={() => setActiveSection('operations')}>
-        <Text style={styles.buttonText}>Mantenimiento operativo</Text>
+      <TouchableOpacity style={activeSection === 'settings' ? styles.primaryButton : styles.secondaryButton} onPress={() => setActiveSection('settings')}>
+        <Text style={styles.buttonText}>Datos del complejo</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={activeSection === 'fields' ? styles.primaryButton : styles.secondaryButton} onPress={() => setActiveSection('fields')}>
+        <Text style={styles.buttonText}>Campos</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={activeSection === 'calendar' ? styles.primaryButton : styles.secondaryButton} onPress={() => setActiveSection('calendar')}>
+        <Text style={styles.buttonText}>Calendario semanal</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={activeSection === 'reports' ? styles.primaryButton : styles.secondaryButton} onPress={() => setActiveSection('reports')}>
+        <Text style={styles.buttonText}>Reportes y consultas</Text>
       </TouchableOpacity>
 
-      {activeSection === 'operations' ? (
-        <ComplexOperations styles={styles} selectedComplex={selectedComplex} />
-      ) : (
-        <ComplexReports styles={styles} selectedComplex={selectedComplex} />
-      )}
+      {renderSection()}
 
       <TouchableOpacity style={styles.secondaryButton} onPress={() => setSelectedComplex(null)}>
         <Text style={styles.buttonText}>Cambiar complejo</Text>
