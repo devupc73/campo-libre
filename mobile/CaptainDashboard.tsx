@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import CaptainOfficialAssociation from './CaptainOfficialAssociation';
+import CaptainPaymentValidationPanel from './CaptainPaymentValidationPanel';
 import CaptainPaymentValidationSummary from './CaptainPaymentValidationSummary';
 import DashboardCards from './DashboardCards';
 
@@ -127,7 +128,6 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
   }
 
   const pendingPayments = participants.filter((participant) => participant.payment_status === 'paid' && participant.payment_validation_status === 'pending_validation');
-  const observedPayments = participants.filter((participant) => participant.payment_status === 'paid' && participant.payment_validation_status === 'observed');
   const validatedPayments = participants.filter((participant) => participant.payment_validation_status === 'validated');
 
   function renderParticipantPaymentActions(participant: any) {
@@ -205,32 +205,17 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
 
       {!!selectedMatch && (
         <View>
+          <Text style={styles.title}>Detalle de convocatoria</Text>
+          <Text style={styles.subtitle}>{selectedMatch.title}</Text>
+
+          <CaptainPaymentValidationPanel styles={styles} participants={participants} onValidate={validatePayment} />
+
           <CaptainOfficialAssociation
             styles={styles}
             userId={userId}
             selectedMatch={selectedMatch}
             onSaved={afterOfficialAssociationSaved}
           />
-
-          <Text style={styles.title}>Validación de pagos pendientes</Text>
-          <Text style={styles.subtitle}>Revisa código de operación y constancia antes de aprobar.</Text>
-
-          {pendingPayments.length === 0 && observedPayments.length === 0 ? (
-            <Text style={styles.status}>No hay pagos pendientes u observados para esta convocatoria.</Text>
-          ) : (
-            [...pendingPayments, ...observedPayments].map((participant) => (
-              <View key={`pending-${participant.id}`} style={styles.card}>
-                <Text style={styles.cardTitle}>Jugador #{participant.user_id}</Text>
-                <Text style={styles.moduleText}>Estado participante: {participant.status}</Text>
-                <Text style={styles.moduleText}>Validación actual: {participant.payment_validation_status || '-'}</Text>
-                <Text style={styles.moduleText}>Método: {participant.payment_method || '-'}</Text>
-                <Text style={styles.moduleText}>Monto declarado: S/ {participant.paid_amount || 0}</Text>
-                <Text style={styles.moduleText}>Operación: {participant.payment_operation_code || '-'}</Text>
-                <Text style={styles.moduleText}>Constancia: {participant.payment_receipt_url || '-'}</Text>
-                {renderParticipantPaymentActions(participant)}
-              </View>
-            ))
-          )}
 
           <Text style={styles.title}>Todos los participantes</Text>
 
