@@ -90,6 +90,7 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
       });
 
       if (selectedMatch) openMatch(selectedMatch);
+      await loadMatches();
     } catch {
       setMessage('No se pudo registrar el pago');
     }
@@ -124,10 +125,38 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
     await openMatch(updatedMatch);
   }
 
+  const pendingPayments = participants.filter((participant) => participant.payment_status === 'paid' && participant.payment_validation_status === 'pending_validation');
+  const observedPayments = participants.filter((participant) => participant.payment_status === 'paid' && participant.payment_validation_status === 'observed');
+  const validatedPayments = participants.filter((participant) => participant.payment_validation_status === 'validated');
+
+  function renderParticipantPaymentActions(participant: any) {
+    if (participant.payment_status !== 'paid') {
+      return (
+        <TouchableOpacity style={styles.primaryButton} onPress={() => registerPayment(participant.id)}>
+          <Text style={styles.buttonText}>Registrar pago manual</Text>
+        </TouchableOpacity>
+      );
+    }
+
+    return (
+      <View>
+        <TouchableOpacity style={styles.primaryButton} onPress={() => validatePayment(participant.id, 'validated')}>
+          <Text style={styles.buttonText}>Validar pago</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.secondaryButton} onPress={() => validatePayment(participant.id, 'observed')}>
+          <Text style={styles.buttonText}>Observar pago</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.secondaryButton} onPress={() => validatePayment(participant.id, 'rejected')}>
+          <Text style={styles.buttonText}>Rechazar pago</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <ScrollView>
       <Text style={styles.title}>Capitán / gestor del equipo</Text>
-      <Text style={styles.subtitle}>Organiza convocatorias, recauda pagos y controla el fondo acumulado.</Text>
+      <Text style={styles.subtitle}>Organiza convocatorias, valida pagos y controla el fondo acumulado.</Text>
 
       <DashboardCards
         styles={styles}
@@ -136,8 +165,8 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
           { label: 'Fondo acumulado', value: `S/ ${summary?.accumulated_fund || 0}`, description: 'Ingresos menos pago cancha' },
           { label: 'Jugadores confirmados', value: summary?.confirmed_players || 0, description: 'Titulares actuales' },
           { label: 'Reservas', value: summary?.reserve_players || 0, description: 'Lista de espera' },
-          { label: 'Pagos por validar', value: summary?.pending_validation_players || 0, description: 'Requieren revisión del capitán' },
-          { label: 'Recaudado', value: `S/ ${summary?.collected_amount || 0}`, description: 'Pagos registrados' },
+          { label: 'Pagos por validar', value: pendingPayments.length || summary?.pending_validation_players || 0, description: 'Requieren revisión del capitán' },
+          { label: 'Pagos validados', value: validatedPayments.length, description: 'Aprobados por el capitán' },
         ]}
       />
 
@@ -167,6 +196,7 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
           <Text style={styles.moduleText}>Recaudado: S/ {match.collected_amount || 0}</Text>
           <Text style={styles.moduleText}>Pagos por validar: {match.pending_validation_players || 0}</Text>
           <Text style={styles.moduleText}>Estado campo: {match.court_id ? 'Asociado oficialmente' : 'Pendiente'}</Text>
+          <Text style={styles.status}>Toca para revisar participantes y validar pagos</Text>
         </TouchableOpacity>
       ))}
 
@@ -179,7 +209,27 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
             onSaved={afterOfficialAssociationSaved}
           />
 
-          <Text style={styles.title}>Participantes y validación de pagos</Text>
+          <Text style={styles.title}>Validación de pagos pendientes</Text>
+          <Text style={styles.subtitle}>Revisa código de operación y constancia antes de aprobar.</Text>
+
+          {pendingPayments.length === 0 && observedPayments.length === 0 ? (
+            <Text style={styles.status}>No hay pagos pendientes u observados para esta convocatoria.</Text>
+          ) : (
+            [...pendingPayments, ...observedPayments].map((participant) => (
+              <View key={`pending-${participant.id}`} style={styles.card}>
+                <Text style={styles.cardTitle}>Jugador #{participant.user_id}</Text>
+                <Text style={styles.moduleText}>Estado participante: {participant.status}</Text>
+                <Text style={styles.moduleText}>Validación actual: {participant.payment_validation_status || '-'}</Text>
+                <Text style={styles.moduleText}>Método: {participant.payment_method || '-'}</Text>
+                <Text style={styles.moduleText}>Monto declarado: S/ {participant.paid_amount || 0}</Text>
+                <Text style={styles.moduleText}>Operación: {participant.payment_operation_code || '-'}</Text>
+                <Text style={styles.moduleText}>Constancia: {participant.payment_receipt_url || '-'}</Text>
+                {renderParticipantPaymentActions(participant)}
+              </View>
+            ))
+          )}
+
+          <Text style={styles.title}>Todos los participantes</Text>
 
           {participants.map((participant) => (
             <View key={participant.id} style={styles.card}>
@@ -192,26 +242,7 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
               <Text style={styles.moduleText}>Monto: S/ {participant.paid_amount || 0}</Text>
               <Text style={styles.moduleText}>Operación: {participant.payment_operation_code || '-'}</Text>
               <Text style={styles.moduleText}>Constancia: {participant.payment_receipt_url || '-'}</Text>
-
-              {participant.payment_status !== 'paid' && (
-                <TouchableOpacity style={styles.primaryButton} onPress={() => registerPayment(participant.id)}>
-                  <Text style={styles.buttonText}>Registrar pago manual</Text>
-                </TouchableOpacity>
-              )}
-
-              {participant.payment_status === 'paid' && (
-                <View>
-                  <TouchableOpacity style={styles.primaryButton} onPress={() => validatePayment(participant.id, 'validated')}>
-                    <Text style={styles.buttonText}>Validar pago</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.secondaryButton} onPress={() => validatePayment(participant.id, 'observed')}>
-                    <Text style={styles.buttonText}>Observar pago</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.secondaryButton} onPress={() => validatePayment(participant.id, 'rejected')}>
-                    <Text style={styles.buttonText}>Rechazar pago</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
+              {renderParticipantPaymentActions(participant)}
             </View>
           ))}
         </View>
