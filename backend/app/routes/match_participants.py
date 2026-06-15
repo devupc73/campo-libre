@@ -18,9 +18,13 @@ def refresh_match_amounts(db: Session, match_id: int):
     participants = db.query(MatchParticipant).filter(
         MatchParticipant.match_id == match_id
     ).all()
-    collected = sum(float(p.paid_amount or 0) for p in participants if p.payment_status == 'paid')
-    match.collected_amount = collected
-    match.accumulated_fund = collected - float(match.paid_to_complex or 0)
+    validated_collected = sum(
+        float(p.paid_amount or 0)
+        for p in participants
+        if p.payment_status == 'paid' and p.payment_validation_status == 'validated'
+    )
+    match.collected_amount = validated_collected
+    match.accumulated_fund = validated_collected - float(match.paid_to_complex or 0)
 
 
 @router.get('')
@@ -38,28 +42,12 @@ def list_participants(match_id: int | None = None):
 def join_match(payload: MatchParticipantCreate):
     db: Session = SessionLocal()
 
-    existing = db.query(MatchParticipant).filter(
-        MatchParticipant.match_id == payload.match_id,
-        MatchParticipant.user_id == payload.user_id,
-    ).first()
-
-    if existing:
-        if float(payload.paid_amount or 0) > 0:
-            existing.payment_status = 'paid'
-            existing.payment_method = payload.payment_method or existing.payment_method
-            existing.paid_amount = payload.paid_amount
-            existing.payment_operation_code = payload.payment_operation_code
-            existing.payment_receipt_url = payload.payment_receipt_url
-            existing.payment_validation_status = 'pending_validation'
-            refresh_match_amounts(db, payload.match_id)
-            db.commit()
-            db.refresh(existing)
-        return existing
-
     match = db.query(Match).filter(Match.id == payload.match_id).first()
 
     if not match:
         raise HTTPException(status_code=404, detail='Convocatoria no encontrada')
+
+    paid_players_count = max(int(payload.paid_players_count or 1), 1)
 
     confirmed_players = db.query(MatchParticipant).filter(
         MatchParticipant.match_id == payload.match_id,
@@ -88,6 +76,7 @@ def join_match(payload: MatchParticipantCreate):
         participant_order=total_players + 1,
         payment_method=payload.payment_method,
         paid_amount=payload.paid_amount,
+        paid_players_count=paid_players_count,
         payment_status=payment_status,
         payment_operation_code=payload.payment_operation_code,
         payment_receipt_url=payload.payment_receipt_url,
@@ -119,6 +108,7 @@ def register_payment(participant_id: int, payload: dict):
     participant.payment_status = 'paid'
     participant.payment_method = payload.get('payment_method', 'yape')
     participant.paid_amount = payload.get('paid_amount', 0)
+    participant.paid_players_count = max(int(payload.get('paid_players_count', 1) or 1), 1)
     participant.payment_operation_code = payload.get('payment_operation_code')
     participant.payment_receipt_url = payload.get('payment_receipt_url')
     participant.payment_validation_status = 'pending_validation'
@@ -150,6 +140,7 @@ def validate_payment(participant_id: int, payload: dict):
     if validation_status == 'rejected':
         participant.payment_status = 'pending'
         participant.paid_amount = 0
+        participant.paid_players_count = 1
 
     refresh_match_amounts(db, participant.match_id)
     db.commit()
