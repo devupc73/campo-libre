@@ -1,5 +1,7 @@
 from fastapi import FastAPI
+from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 
 from app.database import Base
 from app.database import engine
@@ -44,6 +46,21 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*'],
 )
+
+
+@app.middleware('http')
+async def add_defensive_cors_headers(request: Request, call_next):
+    if request.method == 'OPTIONS':
+        response = Response(status_code=204)
+    else:
+        response = await call_next(request)
+
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,DELETE,OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = '*'
+    response.headers['Access-Control-Max-Age'] = '86400'
+    return response
+
 
 app.include_router(health_router)
 app.include_router(auth_router)
