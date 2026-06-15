@@ -14,6 +14,7 @@ export default function PlayerConvocations({ styles, userId }: any) {
   const [matches, setMatches] = useState<any[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<Record<string, string>>({});
   const [paymentAmounts, setPaymentAmounts] = useState<Record<string, string>>({});
+  const [paidPlayersCounts, setPaidPlayersCounts] = useState<Record<string, string>>({});
   const [operationCodes, setOperationCodes] = useState<Record<string, string>>({});
   const [receiptUrls, setReceiptUrls] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('');
@@ -30,14 +31,17 @@ export default function PlayerConvocations({ styles, userId }: any) {
 
       const defaultAmounts: Record<string, string> = {};
       const defaultMethods: Record<string, string> = {};
+      const defaultCounts: Record<string, string> = {};
       if (Array.isArray(data)) {
         data.forEach((match) => {
           defaultAmounts[String(match.id)] = String(match.player_fee || 0);
           defaultMethods[String(match.id)] = 'yape';
+          defaultCounts[String(match.id)] = '1';
         });
       }
       setPaymentAmounts((current) => ({ ...defaultAmounts, ...current }));
       setPaymentMethods((current) => ({ ...defaultMethods, ...current }));
+      setPaidPlayersCounts((current) => ({ ...defaultCounts, ...current }));
     } catch {
       setMessage('No se pudieron cargar las convocatorias.');
     }
@@ -46,6 +50,7 @@ export default function PlayerConvocations({ styles, userId }: any) {
   async function joinMatch(matchId: number) {
     const key = String(matchId);
     const amount = Number(paymentAmounts[key] || 0);
+    const paidPlayersCount = Math.max(Number(paidPlayersCounts[key] || 1), 1);
     const method = paymentMethods[key] || 'yape';
     const operationCode = operationCodes[key] || '';
     const receiptUrl = receiptUrls[key] || '';
@@ -61,6 +66,7 @@ export default function PlayerConvocations({ styles, userId }: any) {
           skill_level: 3,
           payment_method: method,
           paid_amount: amount,
+          paid_players_count: paidPlayersCount,
           payment_operation_code: operationCode,
           payment_receipt_url: receiptUrl,
         }),
@@ -68,7 +74,7 @@ export default function PlayerConvocations({ styles, userId }: any) {
 
       if (!response.ok) throw new Error();
       const data = await response.json();
-      setMessage(data.payment_status === 'paid' ? 'Inscripción y pago registrados. Pendiente validación del capitán.' : 'Inscripción registrada con pago pendiente.');
+      setMessage(data.payment_status === 'paid' ? `Inscripción y pago por ${paidPlayersCount} jugador(es) registrados. Pendiente validación del capitán.` : 'Inscripción registrada con pago pendiente.');
       await loadMatches();
     } catch {
       setMessage('No se pudo registrar la inscripción.');
@@ -102,12 +108,12 @@ export default function PlayerConvocations({ styles, userId }: any) {
                   { label: 'Confirmados', value: `${match.confirmed_players || 0}/${match.max_players || 0}`, description: 'Titulares' },
                   { label: 'Reservas', value: match.reserve_players || 0, description: 'Lista de espera' },
                   { label: 'Disponible', value: match.available_slots || 0, description: 'Cupos titulares' },
-                  { label: 'Recaudado', value: `S/ ${match.collected_amount || 0}`, description: 'Pagos registrados' },
-                  { label: 'Por validar', value: match.pending_validation_players || 0, description: 'Pagos con constancia' },
+                  { label: 'Validado', value: `S/ ${match.validated_collected_amount || match.collected_amount || 0}`, description: 'Fondo reconocido' },
+                  { label: 'Declarado', value: `S/ ${match.declared_collected_amount || 0}`, description: 'Pagos reportados' },
                 ]}
               />
 
-              <Text style={styles.moduleText}>Aporte sugerido: S/ {match.player_fee || 0}</Text>
+              <Text style={styles.moduleText}>Aporte sugerido por jugador: S/ {match.player_fee || 0}</Text>
 
               <ComboSelect
                 styles={styles}
@@ -119,7 +125,15 @@ export default function PlayerConvocations({ styles, userId }: any) {
 
               <TextInput
                 style={styles.input}
-                placeholder="Monto pagado"
+                placeholder="Cantidad de jugadores que cubre el pago"
+                placeholderTextColor="#64748b"
+                value={paidPlayersCounts[key] || '1'}
+                onChangeText={(value) => setPaidPlayersCounts((current) => ({ ...current, [key]: value }))}
+              />
+
+              <TextInput
+                style={styles.input}
+                placeholder="Monto total pagado"
                 placeholderTextColor="#64748b"
                 value={paymentAmounts[key] || String(match.player_fee || 0)}
                 onChangeText={(value) => setPaymentAmounts((current) => ({ ...current, [key]: value }))}
