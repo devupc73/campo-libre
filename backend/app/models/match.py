@@ -20,6 +20,7 @@ class Match(Base):
     match_time = Column(String, nullable=True)
     payment_deadline = Column(String, nullable=True)
     player_fee = Column(Float, default=0)
+    invitation_code = Column(String, nullable=True, unique=True, index=True)
     collected_amount = Column(Float, default=0)
     paid_to_complex = Column(Float, default=0)
     complex_payment_method = Column(String, nullable=True)
