@@ -56,8 +56,9 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
       });
 
       if (!response.ok) throw new Error();
+      const data = await response.json();
 
-      setMessage('Convocatoria creada');
+      setMessage(`Convocatoria creada. Código para compartir: ${data.invitation_code || '-'}`);
       loadMatches();
     } catch {
       setMessage('No se pudo crear la convocatoria');
@@ -157,13 +158,13 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
   return (
     <ScrollView>
       <Text style={styles.title}>Capitán / gestor del equipo</Text>
-      <Text style={styles.subtitle}>Organiza convocatorias, valida pagos y controla el fondo acumulado.</Text>
+      <Text style={styles.subtitle}>Organiza convocatorias privadas por código, valida pagos y controla el fondo acumulado.</Text>
 
       <DashboardCards
         styles={styles}
         items={[
           { label: 'Convocatorias', value: matches.length, description: 'Publicadas por el capitán' },
-          { label: 'Fondo acumulado', value: `S/ ${summary?.accumulated_fund || 0}`, description: 'Ingresos menos pago cancha' },
+          { label: 'Fondo acumulado', value: `S/ ${summary?.accumulated_fund || 0}`, description: 'Ingresos validados menos pago cancha' },
           { label: 'Jugadores confirmados', value: summary?.confirmed_players || 0, description: 'Titulares actuales' },
           { label: 'Reservas', value: summary?.reserve_players || 0, description: 'Lista de espera' },
           { label: 'Pagos por validar', value: pendingPayments.length || summary?.pending_validation_players || 0, description: 'Requieren revisión del capitán' },
@@ -174,6 +175,7 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
       <CaptainPaymentValidationSummary styles={styles} matches={matches} onOpenMatch={openMatch} />
 
       <Text style={styles.title}>Nueva convocatoria</Text>
+      <Text style={styles.subtitle}>Al crearla se generará un código privado para compartir por WhatsApp u otro medio externo.</Text>
 
       <TextInput style={styles.input} placeholder="Título" placeholderTextColor="#64748b" value={title} onChangeText={setTitle} />
       <TextInput style={styles.input} placeholder="Fecha" placeholderTextColor="#64748b" value={matchDate} onChangeText={setMatchDate} />
@@ -192,14 +194,16 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
       {matches.map((match) => (
         <TouchableOpacity key={match.id} style={styles.card} onPress={() => openMatch(match)}>
           <Text style={styles.cardTitle}>{match.title}</Text>
+          <Text style={styles.moduleText}>Código privado: {match.invitation_code || '-'}</Text>
           <Text style={styles.moduleText}>{match.match_date} - {match.match_time}</Text>
           <Text style={styles.moduleText}>Lugar: {match.tentative_location || '-'}</Text>
           <Text style={styles.moduleText}>Jugadores: {match.confirmed_players || 0}/{match.max_players}</Text>
           <Text style={styles.moduleText}>Reservas: {match.reserve_players || 0}</Text>
-          <Text style={styles.moduleText}>Recaudado: S/ {match.collected_amount || 0}</Text>
+          <Text style={styles.moduleText}>Recaudado validado: S/ {match.collected_amount || 0}</Text>
+          <Text style={styles.moduleText}>Declarado por validar: S/ {match.declared_collected_amount || 0}</Text>
           <Text style={styles.moduleText}>Pagos por validar: {match.pending_validation_players || 0}</Text>
           <Text style={styles.moduleText}>Estado campo: {match.court_id ? 'Asociado oficialmente' : 'Pendiente'}</Text>
-          <Text style={styles.status}>Toca para revisar participantes y validar pagos</Text>
+          <Text style={styles.status}>Comparte el código privado solo con los jugadores invitados.</Text>
         </TouchableOpacity>
       ))}
 
@@ -207,6 +211,7 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
         <View>
           <Text style={styles.title}>Detalle de convocatoria</Text>
           <Text style={styles.subtitle}>{selectedMatch.title}</Text>
+          <Text style={styles.status}>Código privado: {selectedMatch.invitation_code || '-'}</Text>
 
           <CaptainPaymentValidationPanel styles={styles} participants={participants} onValidate={validatePayment} />
 
