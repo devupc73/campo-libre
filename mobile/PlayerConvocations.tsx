@@ -12,6 +12,7 @@ const paymentMethodOptions = [
 
 export default function PlayerConvocations({ styles, userId }: any) {
   const [matches, setMatches] = useState<any[]>([]);
+  const [invitationCode, setInvitationCode] = useState('');
   const [paymentMethods, setPaymentMethods] = useState<Record<string, string>>({});
   const [paymentAmounts, setPaymentAmounts] = useState<Record<string, string>>({});
   const [paidPlayersCounts, setPaidPlayersCounts] = useState<Record<string, string>>({});
@@ -20,30 +21,59 @@ export default function PlayerConvocations({ styles, userId }: any) {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    loadMatches();
+    loadMyMatches();
   }, []);
 
-  async function loadMatches() {
-    try {
-      const response = await fetch(`${API_URL}/matches`);
-      const data = await response.json();
-      setMatches(Array.isArray(data) ? data : []);
+  function hydrateDefaults(data: any[]) {
+    const defaultAmounts: Record<string, string> = {};
+    const defaultMethods: Record<string, string> = {};
+    const defaultCounts: Record<string, string> = {};
+    data.forEach((match) => {
+      defaultAmounts[String(match.id)] = String(match.player_fee || 0);
+      defaultMethods[String(match.id)] = 'yape';
+      defaultCounts[String(match.id)] = '1';
+    });
+    setPaymentAmounts((current) => ({ ...defaultAmounts, ...current }));
+    setPaymentMethods((current) => ({ ...defaultMethods, ...current }));
+    setPaidPlayersCounts((current) => ({ ...defaultCounts, ...current }));
+  }
 
-      const defaultAmounts: Record<string, string> = {};
-      const defaultMethods: Record<string, string> = {};
-      const defaultCounts: Record<string, string> = {};
-      if (Array.isArray(data)) {
-        data.forEach((match) => {
-          defaultAmounts[String(match.id)] = String(match.player_fee || 0);
-          defaultMethods[String(match.id)] = 'yape';
-          defaultCounts[String(match.id)] = '1';
-        });
-      }
-      setPaymentAmounts((current) => ({ ...defaultAmounts, ...current }));
-      setPaymentMethods((current) => ({ ...defaultMethods, ...current }));
-      setPaidPlayersCounts((current) => ({ ...defaultCounts, ...current }));
+  async function loadMyMatches() {
+    try {
+      const response = await fetch(`${API_URL}/matches?player_user_id=${userId}`);
+      const data = await response.json();
+      const rows = Array.isArray(data) ? data : [];
+      setMatches(rows);
+      hydrateDefaults(rows);
     } catch {
-      setMessage('No se pudieron cargar las convocatorias.');
+      setMessage('No se pudieron cargar tus convocatorias inscritas.');
+    }
+  }
+
+  async function searchByCode() {
+    const code = invitationCode.trim().toUpperCase();
+    if (!code) {
+      setMessage('Ingresa el código privado de la convocatoria.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/matches?invitation_code=${encodeURIComponent(code)}`);
+      const data = await response.json();
+      const rows = Array.isArray(data) ? data : [];
+
+      if (!rows.length) {
+        setMessage('No se encontró una convocatoria con ese código.');
+        return;
+      }
+
+      const existingIds = new Set(matches.map((match) => String(match.id)));
+      const merged = [...rows, ...matches.filter((match) => !existingIds.has(String(match.id)))];
+      setMatches(merged);
+      hydrateDefaults(merged);
+      setMessage('Convocatoria encontrada. Ya puedes inscribirte.');
+    } catch {
+      setMessage('No se pudo buscar la convocatoria por código.');
     }
   }
 
@@ -75,7 +105,7 @@ export default function PlayerConvocations({ styles, userId }: any) {
       if (!response.ok) throw new Error();
       const data = await response.json();
       setMessage(data.payment_status === 'paid' ? `Inscripción y pago por ${paidPlayersCount} jugador(es) registrados. Pendiente validación del capitán.` : 'Inscripción registrada con pago pendiente.');
-      await loadMatches();
+      await loadMyMatches();
     } catch {
       setMessage('No se pudo registrar la inscripción.');
     }
@@ -83,11 +113,23 @@ export default function PlayerConvocations({ styles, userId }: any) {
 
   return (
     <View>
-      <Text style={styles.title}>Convocatorias disponibles</Text>
-      <Text style={styles.subtitle}>Inscríbete y registra el pago realizado al capitán.</Text>
+      <Text style={styles.title}>Mis convocatorias</Text>
+      <Text style={styles.subtitle}>Ingresa el código privado que te compartió el capitán. Luego de inscribirte podrás ver el avance aquí.</Text>
 
-      <TouchableOpacity style={styles.secondaryButton} onPress={loadMatches}>
-        <Text style={styles.buttonText}>Actualizar convocatorias</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Código privado de convocatoria"
+        placeholderTextColor="#64748b"
+        value={invitationCode}
+        onChangeText={(value) => setInvitationCode(value.toUpperCase())}
+      />
+
+      <TouchableOpacity style={styles.primaryButton} onPress={searchByCode}>
+        <Text style={styles.buttonText}>Buscar convocatoria por código</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.secondaryButton} onPress={loadMyMatches}>
+        <Text style={styles.buttonText}>Actualizar mis convocatorias</Text>
       </TouchableOpacity>
 
       <ScrollView style={{ maxHeight: 620 }}>
@@ -96,6 +138,7 @@ export default function PlayerConvocations({ styles, userId }: any) {
           return (
             <View key={match.id} style={styles.card}>
               <Text style={styles.cardTitle}>{match.title}</Text>
+              <Text style={styles.moduleText}>Código: {match.invitation_code || '-'}</Text>
               <Text style={styles.moduleText}>Fecha: {match.match_date || '-'}</Text>
               <Text style={styles.moduleText}>Hora: {match.match_time || '-'}</Text>
               <Text style={styles.moduleText}>Lugar tentativo: {match.tentative_location || '-'}</Text>
