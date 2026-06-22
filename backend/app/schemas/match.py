@@ -12,6 +12,7 @@ class MatchCreate(BaseModel):
     match_time: str | None = None
     payment_deadline: str | None = None
     player_fee: float = 0
+    invitation_code: str | None = None
     sports_complex_id: int | None = None
     court_id: int | None = None
     schedule_id: int | None = None
