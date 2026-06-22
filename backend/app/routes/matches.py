@@ -1,3 +1,6 @@
+import random
+import string
+
 from fastapi import APIRouter
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
@@ -8,6 +11,20 @@ from app.models.match_participant import MatchParticipant
 from app.schemas.match import MatchCreate
 
 router = APIRouter(prefix='/matches', tags=['matches'])
+
+
+def generate_invitation_code(length: int = 6):
+    alphabet = string.ascii_uppercase + string.digits
+    return ''.join(random.choice(alphabet) for _ in range(length))
+
+
+def ensure_invitation_code(db: Session):
+    for _ in range(20):
+        code = generate_invitation_code()
+        existing = db.query(Match).filter(Match.invitation_code == code).first()
+        if not existing:
+            return code
+    return generate_invitation_code(10)
 
 
 def build_match_summary(match: Match, participants: list[MatchParticipant]):
@@ -35,6 +52,7 @@ def build_match_summary(match: Match, participants: list[MatchParticipant]):
         'match_time': match.match_time,
         'payment_deadline': match.payment_deadline,
         'player_fee': match.player_fee,
+        'invitation_code': match.invitation_code,
         'collected_amount': validated_collected,
         'declared_collected_amount': declared_collected,
         'validated_collected_amount': validated_collected,
@@ -56,12 +74,21 @@ def build_match_summary(match: Match, participants: list[MatchParticipant]):
 
 
 @router.get('')
-def list_matches(captain_user_id: int | None = None):
+def list_matches(captain_user_id: int | None = None, player_user_id: int | None = None, invitation_code: str | None = None):
     db: Session = SessionLocal()
     query = db.query(Match)
 
     if captain_user_id:
         query = query.filter(Match.captain_user_id == captain_user_id)
+    elif player_user_id:
+        participant_match_ids = db.query(MatchParticipant.match_id).filter(
+            MatchParticipant.user_id == player_user_id
+        ).subquery()
+        query = query.filter(Match.id.in_(participant_match_ids))
+    elif invitation_code:
+        query = query.filter(Match.invitation_code == invitation_code.strip().upper())
+    else:
+        return []
 
     matches = query.all()
     result = []
@@ -97,6 +124,7 @@ def get_match_summary(match_id: int):
 @router.post('')
 def create_match(payload: MatchCreate):
     db: Session = SessionLocal()
+    invitation_code = (payload.invitation_code or '').strip().upper() or ensure_invitation_code(db)
 
     match = Match(
         reservation_id=payload.reservation_id,
@@ -109,6 +137,7 @@ def create_match(payload: MatchCreate):
         match_time=payload.match_time,
         payment_deadline=payload.payment_deadline,
         player_fee=payload.player_fee,
+        invitation_code=invitation_code,
         sports_complex_id=payload.sports_complex_id,
         court_id=payload.court_id,
         schedule_id=payload.schedule_id,
@@ -139,6 +168,8 @@ def update_match(match_id: int, payload: MatchCreate):
     match.match_time = payload.match_time
     match.payment_deadline = payload.payment_deadline
     match.player_fee = payload.player_fee
+    if payload.invitation_code:
+        match.invitation_code = payload.invitation_code.strip().upper()
     match.sports_complex_id = payload.sports_complex_id
     match.court_id = payload.court_id
     match.schedule_id = payload.schedule_id
