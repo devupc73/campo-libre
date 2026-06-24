@@ -1,10 +1,13 @@
 from fastapi import APIRouter
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
 from app.models.complex_admin_assignment import ComplexAdminAssignment
 from app.models.court import Court
 from app.models.court_rate import CourtRate
+from app.models.court_schedule import CourtSchedule
+from app.models.match import Match
 from app.models.payment import Payment
 from app.models.reservation import Reservation
 from app.models.sports_complex import SportsComplex
@@ -137,3 +140,41 @@ def get_complex_payments(complex_id: int):
     return db.query(Payment).filter(
         Payment.sports_complex_id == complex_id
     ).all()
+
+
+@router.get('/match-payments/{complex_id}')
+def get_match_payments_for_complex(complex_id: int):
+    db: Session = SessionLocal()
+    return db.query(Match).filter(
+        Match.sports_complex_id == complex_id,
+        Match.paid_to_complex > 0,
+    ).all()
+
+
+@router.put('/match-payments/{match_id}/validation')
+def validate_match_payment(match_id: int, payload: dict):
+    db: Session = SessionLocal()
+    match = db.query(Match).filter(Match.id == match_id).first()
+
+    if not match:
+        raise HTTPException(status_code=404, detail='Convocatoria no encontrada')
+
+    validation_status = payload.get('complex_payment_validation_status')
+    if validation_status not in ['validated', 'observed', 'rejected', 'pending_validation']:
+        raise HTTPException(status_code=400, detail='Estado de validación inválido')
+
+    match.complex_payment_validation_status = validation_status
+
+    if validation_status == 'validated' and match.schedule_id:
+        schedule = db.query(CourtSchedule).filter(CourtSchedule.id == match.schedule_id).first()
+        if schedule:
+            schedule.status = 'reserved'
+
+    if validation_status in ['rejected', 'observed'] and match.schedule_id:
+        schedule = db.query(CourtSchedule).filter(CourtSchedule.id == match.schedule_id).first()
+        if schedule and schedule.status == 'reserved':
+            schedule.status = 'active'
+
+    db.commit()
+    db.refresh(match)
+    return match
