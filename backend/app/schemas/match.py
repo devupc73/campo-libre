@@ -17,6 +17,10 @@ class MatchCreate(BaseModel):
     court_id: int | None = None
     schedule_id: int | None = None
     paid_to_complex: float = 0
+    complex_payment_method: str | None = None
+    complex_payment_operation_code: str | None = None
+    complex_payment_receipt_url: str | None = None
+    complex_payment_validation_status: str | None = None
 
 
 class MatchRead(MatchCreate):
