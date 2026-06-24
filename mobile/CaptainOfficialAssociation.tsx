@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ComboSelect from './ComboSelect';
+import ReceiptImageInput from './ReceiptImageInput';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -8,6 +9,11 @@ function dayName(day: number) {
   const days: any = { 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado', 7: 'Domingo' };
   return days[day] || `Día ${day}`;
 }
+
+const paymentMethodOptions = [
+  { label: 'Yape', value: 'yape' },
+  { label: 'Transferencia bancaria', value: 'transferencia' },
+];
 
 export default function CaptainOfficialAssociation({ styles, userId, selectedMatch, onSaved }: any) {
   const [complexes, setComplexes] = useState<any[]>([]);
@@ -17,6 +23,9 @@ export default function CaptainOfficialAssociation({ styles, userId, selectedMat
   const [selectedCourtId, setSelectedCourtId] = useState('');
   const [selectedScheduleId, setSelectedScheduleId] = useState('');
   const [paidToComplex, setPaidToComplex] = useState('0');
+  const [complexPaymentMethod, setComplexPaymentMethod] = useState('yape');
+  const [complexOperationCode, setComplexOperationCode] = useState('');
+  const [complexReceiptUrl, setComplexReceiptUrl] = useState('');
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -25,6 +34,9 @@ export default function CaptainOfficialAssociation({ styles, userId, selectedMat
     setSelectedCourtId(selectedMatch?.court_id ? String(selectedMatch.court_id) : '');
     setSelectedScheduleId(selectedMatch?.schedule_id ? String(selectedMatch.schedule_id) : '');
     setPaidToComplex(String(selectedMatch?.paid_to_complex || 0));
+    setComplexPaymentMethod(selectedMatch?.complex_payment_method || 'yape');
+    setComplexOperationCode(selectedMatch?.complex_payment_operation_code || '');
+    setComplexReceiptUrl(selectedMatch?.complex_payment_receipt_url || '');
   }, [selectedMatch?.id]);
 
   async function loadComplexes() {
@@ -78,18 +90,23 @@ export default function CaptainOfficialAssociation({ styles, userId, selectedMat
           match_time: selectedMatch.match_time,
           payment_deadline: selectedMatch.payment_deadline,
           player_fee: Number(selectedMatch.player_fee || 0),
+          invitation_code: selectedMatch.invitation_code,
           sports_complex_id: selectedComplexId ? Number(selectedComplexId) : null,
           court_id: selectedCourtId ? Number(selectedCourtId) : null,
           schedule_id: selectedScheduleId ? Number(selectedScheduleId) : null,
           paid_to_complex: Number(paidToComplex || 0),
+          complex_payment_method: complexPaymentMethod,
+          complex_payment_operation_code: complexOperationCode,
+          complex_payment_receipt_url: complexReceiptUrl,
+          complex_payment_validation_status: 'pending_validation',
         }),
       });
       if (!response.ok) throw new Error();
       const data = await response.json();
-      setMessage('Asociación oficial guardada.');
+      setMessage('Pago al complejo registrado. Pendiente validación del administrador del complejo.');
       if (onSaved) onSaved(data);
     } catch {
-      setMessage('No se pudo guardar la asociación oficial.');
+      setMessage('No se pudo guardar la asociación oficial y pago al complejo.');
     }
   }
 
@@ -97,8 +114,8 @@ export default function CaptainOfficialAssociation({ styles, userId, selectedMat
 
   return (
     <View>
-      <Text style={styles.title}>Asociación oficial a campo</Text>
-      <Text style={styles.subtitle}>Relaciona la convocatoria con complejo, campo y franja cuando el capitán confirme el pago al complejo.</Text>
+      <Text style={styles.title}>Asociación oficial y pago al complejo</Text>
+      <Text style={styles.subtitle}>Relaciona la convocatoria con complejo, campo y franja. La franja se bloqueará cuando el complejo valide el pago.</Text>
 
       <ComboSelect
         styles={styles}
@@ -118,7 +135,7 @@ export default function CaptainOfficialAssociation({ styles, userId, selectedMat
 
       <ComboSelect
         styles={styles}
-        label="Franja horaria activa"
+        label="Franja horaria disponible"
         value={selectedScheduleId}
         options={schedules.map((slot) => ({ label: `${dayName(Number(slot.day_of_week))} ${slot.start_time} - ${slot.end_time} | S/ ${slot.price_per_hour || 0}`, value: String(slot.id) }))}
         onChange={setSelectedScheduleId}
@@ -126,8 +143,20 @@ export default function CaptainOfficialAssociation({ styles, userId, selectedMat
 
       <TextInput style={styles.input} placeholder="Monto pagado al complejo" placeholderTextColor="#64748b" value={paidToComplex} onChangeText={setPaidToComplex} />
 
+      <ComboSelect
+        styles={styles}
+        label="Método de pago al complejo"
+        value={complexPaymentMethod}
+        options={paymentMethodOptions}
+        onChange={setComplexPaymentMethod}
+      />
+
+      <TextInput style={styles.input} placeholder="Código de operación pago al complejo" placeholderTextColor="#64748b" value={complexOperationCode} onChangeText={setComplexOperationCode} />
+
+      <ReceiptImageInput styles={styles} label="Constancia de pago al complejo" value={complexReceiptUrl} onChange={setComplexReceiptUrl} />
+
       <TouchableOpacity style={styles.primaryButton} onPress={saveAssociation}>
-        <Text style={styles.buttonText}>Guardar asociación oficial</Text>
+        <Text style={styles.buttonText}>Registrar pago y solicitar validación</Text>
       </TouchableOpacity>
 
       {!!message && <Text style={styles.status}>{message}</Text>}
