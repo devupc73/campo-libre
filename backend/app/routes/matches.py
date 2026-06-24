@@ -57,6 +57,10 @@ def build_match_summary(match: Match, participants: list[MatchParticipant]):
         'declared_collected_amount': declared_collected,
         'validated_collected_amount': validated_collected,
         'paid_to_complex': match.paid_to_complex,
+        'complex_payment_method': match.complex_payment_method,
+        'complex_payment_operation_code': match.complex_payment_operation_code,
+        'complex_payment_receipt_url': match.complex_payment_receipt_url,
+        'complex_payment_validation_status': match.complex_payment_validation_status,
         'accumulated_fund': fund,
         'sports_complex_id': match.sports_complex_id,
         'court_id': match.court_id,
@@ -142,6 +146,10 @@ def create_match(payload: MatchCreate):
         court_id=payload.court_id,
         schedule_id=payload.schedule_id,
         paid_to_complex=payload.paid_to_complex,
+        complex_payment_method=payload.complex_payment_method,
+        complex_payment_operation_code=payload.complex_payment_operation_code,
+        complex_payment_receipt_url=payload.complex_payment_receipt_url,
+        complex_payment_validation_status=payload.complex_payment_validation_status or 'pending_validation',
     )
 
     db.add(match)
@@ -174,6 +182,11 @@ def update_match(match_id: int, payload: MatchCreate):
     match.court_id = payload.court_id
     match.schedule_id = payload.schedule_id
     match.paid_to_complex = payload.paid_to_complex
+    match.complex_payment_method = payload.complex_payment_method
+    match.complex_payment_operation_code = payload.complex_payment_operation_code
+    match.complex_payment_receipt_url = payload.complex_payment_receipt_url
+    if payload.complex_payment_validation_status:
+        match.complex_payment_validation_status = payload.complex_payment_validation_status
 
     db.commit()
     db.refresh(match)
