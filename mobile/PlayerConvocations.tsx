@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ComboSelect from './ComboSelect';
 import DashboardCards from './DashboardCards';
+import ReceiptImageInput from './ReceiptImageInput';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -116,13 +117,7 @@ export default function PlayerConvocations({ styles, userId }: any) {
       <Text style={styles.title}>Mis convocatorias</Text>
       <Text style={styles.subtitle}>Ingresa el código privado que te compartió el capitán. Luego de inscribirte podrás ver el avance aquí.</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Código privado de convocatoria"
-        placeholderTextColor="#64748b"
-        value={invitationCode}
-        onChangeText={(value) => setInvitationCode(value.toUpperCase())}
-      />
+      <TextInput style={styles.input} placeholder="Código privado de convocatoria" placeholderTextColor="#64748b" value={invitationCode} onChangeText={(value) => setInvitationCode(value.toUpperCase())} />
 
       <TouchableOpacity style={styles.primaryButton} onPress={searchByCode}>
         <Text style={styles.buttonText}>Buscar convocatoria por código</Text>
@@ -158,45 +153,13 @@ export default function PlayerConvocations({ styles, userId }: any) {
 
               <Text style={styles.moduleText}>Aporte sugerido por jugador: S/ {match.player_fee || 0}</Text>
 
-              <ComboSelect
-                styles={styles}
-                label="Método de pago realizado"
-                value={paymentMethods[key] || 'yape'}
-                options={paymentMethodOptions}
-                onChange={(value) => setPaymentMethods((current) => ({ ...current, [key]: value }))}
-              />
+              <ComboSelect styles={styles} label="Método de pago realizado" value={paymentMethods[key] || 'yape'} options={paymentMethodOptions} onChange={(value) => setPaymentMethods((current) => ({ ...current, [key]: value }))} />
 
-              <TextInput
-                style={styles.input}
-                placeholder="Cantidad de jugadores que cubre el pago"
-                placeholderTextColor="#64748b"
-                value={paidPlayersCounts[key] || '1'}
-                onChangeText={(value) => setPaidPlayersCounts((current) => ({ ...current, [key]: value }))}
-              />
+              <TextInput style={styles.input} placeholder="Cantidad de jugadores que cubre el pago" placeholderTextColor="#64748b" value={paidPlayersCounts[key] || '1'} onChangeText={(value) => setPaidPlayersCounts((current) => ({ ...current, [key]: value }))} />
+              <TextInput style={styles.input} placeholder="Monto total pagado" placeholderTextColor="#64748b" value={paymentAmounts[key] || String(match.player_fee || 0)} onChangeText={(value) => setPaymentAmounts((current) => ({ ...current, [key]: value }))} />
+              <TextInput style={styles.input} placeholder="Código de operación Yape / transferencia" placeholderTextColor="#64748b" value={operationCodes[key] || ''} onChangeText={(value) => setOperationCodes((current) => ({ ...current, [key]: value }))} />
 
-              <TextInput
-                style={styles.input}
-                placeholder="Monto total pagado"
-                placeholderTextColor="#64748b"
-                value={paymentAmounts[key] || String(match.player_fee || 0)}
-                onChangeText={(value) => setPaymentAmounts((current) => ({ ...current, [key]: value }))}
-              />
-
-              <TextInput
-                style={styles.input}
-                placeholder="Código de operación Yape / transferencia"
-                placeholderTextColor="#64748b"
-                value={operationCodes[key] || ''}
-                onChangeText={(value) => setOperationCodes((current) => ({ ...current, [key]: value }))}
-              />
-
-              <TextInput
-                style={styles.input}
-                placeholder="Link o referencia de imagen de constancia"
-                placeholderTextColor="#64748b"
-                value={receiptUrls[key] || ''}
-                onChangeText={(value) => setReceiptUrls((current) => ({ ...current, [key]: value }))}
-              />
+              <ReceiptImageInput styles={styles} label="Constancia de pago al capitán" value={receiptUrls[key] || ''} onChange={(value: string) => setReceiptUrls((current) => ({ ...current, [key]: value }))} />
 
               <TouchableOpacity style={styles.primaryButton} onPress={() => joinMatch(match.id)}>
                 <Text style={styles.buttonText}>Inscribirme y registrar pago</Text>
