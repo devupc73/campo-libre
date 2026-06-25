@@ -5,32 +5,31 @@ import DashboardCards from './DashboardCards';
 export default function ComplexDashboardPage({ styles, selectedComplex, onNavigate }: any) {
   return (
     <View>
-      <Text style={styles.title}>Dashboard del complejo</Text>
+      <Text style={styles.title}>Panel del complejo</Text>
       <Text style={styles.subtitle}>{selectedComplex?.name}</Text>
       <DashboardCards
         styles={styles}
         items={[
-          { label: 'Estado', value: 'Activo', description: 'Complejo seleccionado' },
-          { label: 'Operación', value: 'Semanal', description: 'Gestión por calendario' },
-          { label: 'Reservas', value: 'Consulta', description: 'Seguimiento operativo' },
-          { label: 'Pagos', value: 'Pendiente', description: 'Control financiero manual' },
+          { label: 'Complejo', value: selectedComplex?.name ? 'Activo' : 'Pendiente', description: 'Estado de selección' },
+          { label: 'Gestión', value: 'Operativa', description: 'Campos, calendario y pagos' },
+          { label: 'Pagos', value: 'Validación', description: 'Pagos de capitanes' },
         ]}
       />
       <TouchableOpacity style={styles.moduleButton} onPress={() => onNavigate('settings')}>
         <Text style={styles.moduleTitle}>Datos del complejo</Text>
-        <Text style={styles.moduleText}>Editar información general del complejo.</Text>
+        <Text style={styles.moduleText}>Editar información general y medios de pago.</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.moduleButton} onPress={() => onNavigate('fields')}>
         <Text style={styles.moduleTitle}>Campos deportivos</Text>
-        <Text style={styles.moduleText}>Crear, actualizar o eliminar campos.</Text>
+        <Text style={styles.moduleText}>Mantenimiento independiente de campos.</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.moduleButton} onPress={() => onNavigate('calendar')}>
         <Text style={styles.moduleTitle}>Calendario semanal</Text>
-        <Text style={styles.moduleText}>Generar franjas, tarifas y estados.</Text>
+        <Text style={styles.moduleText}>Franjas activas, inactivas y reservadas.</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.moduleButton} onPress={() => onNavigate('reports')}>
-        <Text style={styles.moduleTitle}>Reportes y consultas</Text>
-        <Text style={styles.moduleText}>Reservas, disponibilidad e indicadores.</Text>
+        <Text style={styles.moduleTitle}>Pagos, reservas y reportes</Text>
+        <Text style={styles.moduleText}>Validaciones y consultas operativas.</Text>
       </TouchableOpacity>
     </View>
   );
