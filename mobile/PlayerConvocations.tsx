@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ComboSelect from './ComboSelect';
 import DashboardCards from './DashboardCards';
-import ReceiptImageInput from './ReceiptImageInput';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -18,7 +17,6 @@ export default function PlayerConvocations({ styles, userId }: any) {
   const [paymentAmounts, setPaymentAmounts] = useState<Record<string, string>>({});
   const [paidPlayersCounts, setPaidPlayersCounts] = useState<Record<string, string>>({});
   const [operationCodes, setOperationCodes] = useState<Record<string, string>>({});
-  const [receiptUrls, setReceiptUrls] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -84,7 +82,6 @@ export default function PlayerConvocations({ styles, userId }: any) {
     const paidPlayersCount = Math.max(Number(paidPlayersCounts[key] || 1), 1);
     const method = paymentMethods[key] || 'yape';
     const operationCode = operationCodes[key] || '';
-    const receiptUrl = receiptUrls[key] || '';
 
     try {
       const response = await fetch(`${API_URL}/match-participants`, {
@@ -99,7 +96,7 @@ export default function PlayerConvocations({ styles, userId }: any) {
           paid_amount: amount,
           paid_players_count: paidPlayersCount,
           payment_operation_code: operationCode,
-          payment_receipt_url: receiptUrl,
+          payment_receipt_url: '',
         }),
       });
 
@@ -154,12 +151,9 @@ export default function PlayerConvocations({ styles, userId }: any) {
               <Text style={styles.moduleText}>Aporte sugerido por jugador: S/ {match.player_fee || 0}</Text>
 
               <ComboSelect styles={styles} label="Método de pago realizado" value={paymentMethods[key] || 'yape'} options={paymentMethodOptions} onChange={(value) => setPaymentMethods((current) => ({ ...current, [key]: value }))} />
-
               <TextInput style={styles.input} placeholder="Cantidad de jugadores que cubre el pago" placeholderTextColor="#64748b" value={paidPlayersCounts[key] || '1'} onChangeText={(value) => setPaidPlayersCounts((current) => ({ ...current, [key]: value }))} />
               <TextInput style={styles.input} placeholder="Monto total pagado" placeholderTextColor="#64748b" value={paymentAmounts[key] || String(match.player_fee || 0)} onChangeText={(value) => setPaymentAmounts((current) => ({ ...current, [key]: value }))} />
-              <TextInput style={styles.input} placeholder="Código de operación Yape / transferencia" placeholderTextColor="#64748b" value={operationCodes[key] || ''} onChangeText={(value) => setOperationCodes((current) => ({ ...current, [key]: value }))} />
-
-              <ReceiptImageInput styles={styles} label="Constancia de pago al capitán" value={receiptUrls[key] || ''} onChange={(value: string) => setReceiptUrls((current) => ({ ...current, [key]: value }))} />
+              <TextInput style={styles.input} placeholder="Número de operación Yape / transferencia" placeholderTextColor="#64748b" value={operationCodes[key] || ''} onChangeText={(value) => setOperationCodes((current) => ({ ...current, [key]: value }))} />
 
               <TouchableOpacity style={styles.primaryButton} onPress={() => joinMatch(match.id)}>
                 <Text style={styles.buttonText}>Inscribirme y registrar pago</Text>
