@@ -1,23 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import DashboardCards from './DashboardCards';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 
 function money(value: number) {
   return `S/ ${Math.round(value || 0)}`;
-}
-
-function receiptPreview(value: string, styles: any) {
-  const isImage = typeof value === 'string' && (value.startsWith('data:image') || value.startsWith('http'));
-  if (!value) return <Text style={styles.moduleText}>Constancia: -</Text>;
-  if (!isImage) return <Text style={styles.moduleText}>Constancia: {value}</Text>;
-  return (
-    <View>
-      <Text style={styles.moduleText}>Constancia:</Text>
-      <Image source={{ uri: value }} style={{ width: '100%', height: 220, resizeMode: 'contain', borderRadius: 12, marginTop: 8 }} />
-    </View>
-  );
 }
 
 export default function ComplexReports({ styles, selectedComplex }: any) {
@@ -66,7 +54,7 @@ export default function ComplexReports({ styles, selectedComplex }: any) {
 
       if (!response.ok) throw new Error();
 
-      if (status === 'validated') setMessage('Pago validado. La franja quedó marcada como no disponible.');
+      if (status === 'validated') setMessage('Pago validado. La franja quedó marcada como reservada.');
       if (status === 'observed') setMessage('Pago observado.');
       if (status === 'rejected') setMessage('Pago rechazado.');
 
@@ -119,11 +107,10 @@ export default function ComplexReports({ styles, selectedComplex }: any) {
               <Text style={styles.moduleText}>Campo: {court?.name || item.court_id || '-'}</Text>
               <Text style={styles.moduleText}>Monto pagado: {money(Number(item.paid_to_complex || 0))}</Text>
               <Text style={styles.moduleText}>Método: {item.complex_payment_method || '-'}</Text>
-              <Text style={styles.moduleText}>Operación: {item.complex_payment_operation_code || '-'}</Text>
+              <Text style={styles.moduleText}>Número de operación: {item.complex_payment_operation_code || '-'}</Text>
               <Text style={styles.moduleText}>Estado: {item.complex_payment_validation_status || 'pending_validation'}</Text>
-              {receiptPreview(item.complex_payment_receipt_url, styles)}
               <TouchableOpacity style={styles.primaryButton} onPress={() => validateMatchPayment(item.id, 'validated')}>
-                <Text style={styles.buttonText}>Aceptar pago y bloquear franja</Text>
+                <Text style={styles.buttonText}>Aceptar pago y reservar franja</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.secondaryButton} onPress={() => validateMatchPayment(item.id, 'observed')}>
                 <Text style={styles.buttonText}>Observar pago</Text>
