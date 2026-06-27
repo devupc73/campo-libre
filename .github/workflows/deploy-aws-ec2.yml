@@ -1,0 +1,44 @@
+name: Deploy AWS EC2
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script: |
+            set -euo pipefail
+            APP_DIR=${{ secrets.EC2_APP_DIR }}
+            if [ -z "$APP_DIR" ]; then APP_DIR=/opt/campo-libre; fi
+            if [ ! -d "$APP_DIR/.git" ]; then
+              sudo mkdir -p "$APP_DIR"
+              sudo chown -R $USER:$USER "$APP_DIR"
+              git clone https://github.com/${{ github.repository }}.git "$APP_DIR"
+            fi
+            cd "$APP_DIR"
+            git fetch origin main
+            git reset --hard origin/main
+            cd deploy/aws-ec2
+            cat > .env <<EOF
+            POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+            POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            FRONTEND_DOMAIN=${{ secrets.FRONTEND_DOMAIN }}
+            API_DOMAIN=${{ secrets.API_DOMAIN }}
+            EOF
+            docker compose --env-file .env -f docker-compose.prod.yml up -d --build
+            docker image prune -f
