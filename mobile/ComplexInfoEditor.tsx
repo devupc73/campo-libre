@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import ComplexLocationCard from './ComplexLocationCard';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -15,8 +16,8 @@ export default function ComplexInfoEditor({ styles, selectedComplex, onUpdated }
   useEffect(() => {
     setName(selectedComplex?.name || '');
     setAddress(selectedComplex?.address || '');
-    setLatitude(String(selectedComplex?.latitude || '-12.0464'));
-    setLongitude(String(selectedComplex?.longitude || '-77.0428'));
+    setLatitude(String(selectedComplex?.latitude ?? '-12.0464'));
+    setLongitude(String(selectedComplex?.longitude ?? '-77.0428'));
     setPhone(selectedComplex?.phone || '');
     setDescription(selectedComplex?.description || '');
   }, [selectedComplex?.id]);
@@ -27,19 +28,12 @@ export default function ComplexInfoEditor({ styles, selectedComplex, onUpdated }
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name,
-          address,
-          latitude: Number(latitude),
-          longitude: Number(longitude),
-          phone,
-          description,
-          image_url: selectedComplex?.image_url || '',
-          rating: selectedComplex?.rating || 0,
+          name, address, latitude: Number(latitude), longitude: Number(longitude), phone, description,
+          image_url: selectedComplex?.image_url || '', rating: selectedComplex?.rating || 0,
           system_admin_user_id: selectedComplex?.system_admin_user_id || null,
           complex_admin_user_id: selectedComplex?.complex_admin_user_id || null,
         }),
       });
-
       if (!response.ok) throw new Error();
       const data = await response.json();
       setMessage('Complejo actualizado correctamente');
@@ -52,19 +46,15 @@ export default function ComplexInfoEditor({ styles, selectedComplex, onUpdated }
   return (
     <View>
       <Text style={styles.title}>Datos del complejo</Text>
-      <Text style={styles.subtitle}>Edita la información general del complejo seleccionado.</Text>
-
+      <Text style={styles.subtitle}>Edita la información general y confirma visualmente la ubicación.</Text>
       <TextInput style={styles.input} placeholder="Nombre" placeholderTextColor="#64748b" value={name} onChangeText={setName} />
       <TextInput style={styles.input} placeholder="Dirección" placeholderTextColor="#64748b" value={address} onChangeText={setAddress} />
       <TextInput style={styles.input} placeholder="Latitud" placeholderTextColor="#64748b" value={latitude} onChangeText={setLatitude} />
       <TextInput style={styles.input} placeholder="Longitud" placeholderTextColor="#64748b" value={longitude} onChangeText={setLongitude} />
+      <ComplexLocationCard styles={styles} latitude={latitude} longitude={longitude} address={address} title="Ubicación registrada" />
       <TextInput style={styles.input} placeholder="Teléfono" placeholderTextColor="#64748b" value={phone} onChangeText={setPhone} />
       <TextInput style={styles.input} placeholder="Descripción" placeholderTextColor="#64748b" value={description} onChangeText={setDescription} />
-
-      <TouchableOpacity style={styles.primaryButton} onPress={saveComplex}>
-        <Text style={styles.buttonText}>Actualizar complejo</Text>
-      </TouchableOpacity>
-
+      <TouchableOpacity style={styles.primaryButton} onPress={saveComplex}><Text style={styles.buttonText}>Actualizar complejo</Text></TouchableOpacity>
       {!!message && <Text style={styles.status}>{message}</Text>}
     </View>
   );
