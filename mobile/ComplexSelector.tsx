@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import ComboSelect from './ComboSelect';
+import ComplexLocationCard from './ComplexLocationCard';
 
 export default function ComplexSelector({ styles, complexes, onSelect }: any) {
   const [selectedComplexId, setSelectedComplexId] = useState('');
+  const selectedComplex = complexes.find((item: any) => String(item.id) === selectedComplexId);
 
   return (
     <View>
@@ -18,14 +20,15 @@ export default function ComplexSelector({ styles, complexes, onSelect }: any) {
           label: `${complex.name} (${complex.address})`,
           value: String(complex.id),
         }))}
-        onChange={(value) => setSelectedComplexId(value)}
+        onChange={setSelectedComplexId}
       />
+
+      {!!selectedComplex && <ComplexLocationCard styles={styles} complex={selectedComplex} title={`Cómo llegar a ${selectedComplex.name}`} />}
 
       <TouchableOpacity
         style={styles.primaryButton}
         onPress={() => {
-          const complex = complexes.find((item: any) => String(item.id) === selectedComplexId);
-          if (complex) onSelect(complex);
+          if (selectedComplex) onSelect(selectedComplex);
         }}
       >
         <Text style={styles.buttonText}>Administrar complejo seleccionado</Text>

@@ -3,6 +3,7 @@ import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ComplexCalendarPage from './ComplexCalendarPage';
 import ComplexDashboardPage from './ComplexDashboardPage';
 import ComplexFieldsPage from './ComplexFieldsPage';
+import ComplexLocationCard from './ComplexLocationCard';
 import ComplexReports from './ComplexReports';
 import ComplexSelector from './ComplexSelector';
 import ComplexSettingsPage from './ComplexSettingsPage';
@@ -70,6 +71,7 @@ export default function ComplexAdminPortal({ styles, onLogout }: Props) {
 
   return <View>
     <SportsHero eyebrow="OPERACIÓN DEL COMPLEJO" title={selectedComplex.name} subtitle={selectedComplex.address || 'Gestiona la experiencia completa de esta sede deportiva.'} icon="🏟️" badge="Complejo activo" />
+    <ComplexLocationCard styles={styles} complex={selectedComplex} title={`Cómo llegar a ${selectedComplex.name}`} compact />
     <SportsSectionTitle title="Panel de operación" subtitle="Gestiona cada parte de la experiencia del cliente" icon="⚙️" />
     <SportsAction styles={styles} icon="📊" title="Dashboard" description="Resumen operativo y comercial." onPress={() => setActiveSection('dashboard')} active={activeSection === 'dashboard'} />
     <SportsAction styles={styles} icon="📝" title="Datos del complejo" description="Información comercial y de contacto." onPress={() => setActiveSection('settings')} active={activeSection === 'settings'} accent="blue" />
