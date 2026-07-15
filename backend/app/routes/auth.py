@@ -1,6 +1,8 @@
 from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import HTTPException
+from fastapi import status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.crud.user import UserCrud
@@ -15,14 +17,33 @@ from app.security_password import verify_password
 router = APIRouter(prefix='/auth', tags=['auth'])
 
 
-@router.post('/register', response_model=UserRead)
+@router.post('/register', response_model=UserRead, status_code=status.HTTP_201_CREATED)
 def register(payload: UserCreate, db: Session = Depends(get_db)):
-    return UserCrud.create(db, payload)
+    if UserCrud.get_by_email(db, payload.email):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail='Email is already registered',
+        )
+
+    try:
+        return UserCrud.create(db, payload)
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail='Email is already registered',
+        ) from exc
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
 
 
 @router.post('/login', response_model=TokenResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
-    user = UserCrud.get_by_email(db, payload.email)
+    user = UserCrud.get_by_email(db, payload.email.strip().lower())
 
     if not user:
         raise HTTPException(status_code=401, detail='Invalid credentials')
