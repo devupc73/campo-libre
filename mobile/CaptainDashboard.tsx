@@ -25,6 +25,9 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
   const [maxPlayers, setMaxPlayers] = useState('14');
   const [fee, setFee] = useState('25');
   const [paymentDeadline, setPaymentDeadline] = useState('');
+  const [selectedComplexId, setSelectedComplexId] = useState('');
+  const [selectedCourtId, setSelectedCourtId] = useState('');
+  const [selectedScheduleId, setSelectedScheduleId] = useState('');
 
   useEffect(() => {
     loadMatches();
@@ -41,6 +44,11 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
   }
 
   async function createMatch() {
+    if (!selectedComplexId || !selectedCourtId || !selectedScheduleId) {
+      setMessage('Selecciona complejo, campo y franja antes de crear la convocatoria.');
+      return;
+    }
+
     try {
       const response = await fetch(`${API_URL}/matches`, {
         method: 'POST',
@@ -55,6 +63,9 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
           match_time: matchTime,
           payment_deadline: paymentDeadline,
           player_fee: Number(fee),
+          sports_complex_id: Number(selectedComplexId),
+          court_id: Number(selectedCourtId),
+          schedule_id: Number(selectedScheduleId),
           paid_to_complex: 0,
         }),
       });
@@ -62,6 +73,9 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
       if (!response.ok) throw new Error();
       const data = await response.json();
       setMessage(`Convocatoria creada. Código para compartir: ${data.invitation_code || '-'}`);
+      setSelectedComplexId('');
+      setSelectedCourtId('');
+      setSelectedScheduleId('');
       await loadMatches();
       setSection('matches');
     } catch {
@@ -158,7 +172,7 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
 
   function renderContent() {
     if (section === 'create') {
-      return <CaptainCreateMatchPage styles={styles} title={title} setTitle={setTitle} matchDate={matchDate} setMatchDate={setMatchDate} matchTime={matchTime} setMatchTime={setMatchTime} location={location} setLocation={setLocation} maxPlayers={maxPlayers} setMaxPlayers={setMaxPlayers} fee={fee} setFee={setFee} paymentDeadline={paymentDeadline} setPaymentDeadline={setPaymentDeadline} onCreate={createMatch} />;
+      return <CaptainCreateMatchPage styles={styles} title={title} setTitle={setTitle} matchDate={matchDate} setMatchDate={setMatchDate} matchTime={matchTime} setMatchTime={setMatchTime} location={location} setLocation={setLocation} maxPlayers={maxPlayers} setMaxPlayers={setMaxPlayers} fee={fee} setFee={setFee} paymentDeadline={paymentDeadline} setPaymentDeadline={setPaymentDeadline} selectedComplexId={selectedComplexId} setSelectedComplexId={setSelectedComplexId} selectedCourtId={selectedCourtId} setSelectedCourtId={setSelectedCourtId} selectedScheduleId={selectedScheduleId} setSelectedScheduleId={setSelectedScheduleId} onCreate={createMatch} />;
     }
     if (section === 'matches') return <CaptainMatchesPage styles={styles} matches={matches} onOpenMatch={(match: any) => openMatch(match, 'participants')} />;
     if (section === 'payments') return <CaptainPaymentValidationPanel styles={styles} participants={participants} onValidate={validatePayment} />;
