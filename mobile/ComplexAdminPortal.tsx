@@ -86,7 +86,7 @@ export default function ComplexAdminPortal({ styles, onLogout }: Props) {
       return <ComplexFieldsPage styles={styles} selectedComplex={selectedComplex} selectedCourtId={selectedCourtId} onSelectCourt={setSelectedCourtId} />;
     }
     if (activeSection === 'calendar') {
-      return <ComplexCalendarPage styles={styles} courtId={selectedCourtId} />;
+      return <ComplexCalendarPage styles={styles} selectedComplex={selectedComplex} courtId={selectedCourtId} onSelectCourt={setSelectedCourtId} />;
     }
     if (activeSection === 'reports') {
       return <ComplexReports styles={styles} selectedComplex={selectedComplex} />;
