@@ -5,6 +5,7 @@ import CaptainDashboardHome from './CaptainDashboardHome';
 import CaptainMatchesPage from './CaptainMatchesPage';
 import CaptainOfficialAssociation from './CaptainOfficialAssociation';
 import CaptainPaymentValidationPanel from './CaptainPaymentValidationPanel';
+import { SportsAction, SportsHero, SportsSectionTitle } from './SportsBrand';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 type CaptainSection = 'home' | 'create' | 'matches' | 'payments' | 'official' | 'participants';
@@ -39,12 +40,7 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
     try {
       const response = await fetch(`${API_URL}/matches`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          captain_user_id: Number(userId), title, sport: 'futbol', max_players: Number(maxPlayers),
-          tentative_location: location, match_date: matchDate, match_time: matchTime,
-          payment_deadline: paymentDeadline, player_fee: Number(fee), paid_to_complex: 0,
-          sports_complex_id: null, court_id: null, schedule_id: null,
-        }),
+        body: JSON.stringify({ captain_user_id: Number(userId), title, sport: 'futbol', max_players: Number(maxPlayers), tentative_location: location, match_date: matchDate, match_time: matchTime, payment_deadline: paymentDeadline, player_fee: Number(fee), paid_to_complex: 0, sports_complex_id: null, court_id: null, schedule_id: null }),
       });
       if (!response.ok) throw new Error();
       const data = await response.json();
@@ -60,45 +56,32 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
       const participantsData = await participantsResponse.json();
       setParticipants(Array.isArray(participantsData) ? participantsData : []);
       const summaryResponse = await fetch(`${API_URL}/matches/${match.id}/summary`);
-      setSummary(await summaryResponse.json()); setSection(nextSection);
+      setSummary(await summaryResponse.json());
+      setSection(nextSection);
     } catch { setMessage('No se pudo cargar el detalle de la convocatoria'); }
   }
 
   async function registerPayment(participantId: number) {
     try {
-      await fetch(`${API_URL}/match-participants/${participantId}/payment`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payment_method: 'yape', paid_amount: Number(selectedMatch?.player_fee || 0) }),
-      });
-      if (selectedMatch) await openMatch(selectedMatch, 'participants'); await loadMatches();
+      await fetch(`${API_URL}/match-participants/${participantId}/payment`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ payment_method: 'yape', paid_amount: Number(selectedMatch?.player_fee || 0) }) });
+      if (selectedMatch) await openMatch(selectedMatch, 'participants');
+      await loadMatches();
     } catch { setMessage('No se pudo registrar el pago'); }
   }
 
   async function validatePayment(participantId: number, status: string) {
     try {
-      const response = await fetch(`${API_URL}/match-participants/${participantId}/payment-validation`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ payment_validation_status: status }),
-      });
+      const response = await fetch(`${API_URL}/match-participants/${participantId}/payment-validation`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ payment_validation_status: status }) });
       if (!response.ok) throw new Error();
       setMessage(status === 'validated' ? 'Pago validado correctamente.' : status === 'observed' ? 'Pago observado.' : 'Pago rechazado.');
-      if (selectedMatch) await openMatch(selectedMatch, 'payments'); await loadMatches();
+      if (selectedMatch) await openMatch(selectedMatch, 'payments');
+      await loadMatches();
     } catch { setMessage('No se pudo actualizar la validación del pago'); }
   }
 
-  async function afterOfficialAssociationSaved(updatedMatch: any) {
-    setSelectedMatch(updatedMatch); await loadMatches(); await openMatch(updatedMatch, 'official');
-  }
-
+  async function afterOfficialAssociationSaved(updatedMatch: any) { setSelectedMatch(updatedMatch); await loadMatches(); await openMatch(updatedMatch, 'official'); }
   const pendingPayments = participants.filter((p) => p.payment_status === 'paid' && p.payment_validation_status === 'pending_validation');
-  const renderParticipants = () => !selectedMatch ? <Text style={styles.status}>Selecciona una convocatoria.</Text> : (
-    <View><Text style={styles.title}>Participantes</Text><Text style={styles.subtitle}>{selectedMatch.title}</Text>
-      <Text style={styles.status}>Código privado: {selectedMatch.invitation_code || '-'}</Text>
-      {participants.map((p) => <View key={p.id} style={styles.card}><Text style={styles.cardTitle}>Jugador #{p.user_id}</Text>
-        <Text style={styles.moduleText}>Estado: {p.status}</Text><Text style={styles.moduleText}>Pago: {p.payment_status}</Text>
-        <Text style={styles.moduleText}>Validación: {p.payment_validation_status || '-'}</Text>
-        {p.payment_status !== 'paid' && <TouchableOpacity style={styles.primaryButton} onPress={() => registerPayment(p.id)}><Text style={styles.buttonText}>Registrar pago manual</Text></TouchableOpacity>}
-      </View>)}</View>
-  );
+  const renderParticipants = () => !selectedMatch ? <Text style={styles.status}>Selecciona una convocatoria.</Text> : <View><SportsSectionTitle title="Plantel convocado" subtitle={selectedMatch.title} icon="👥" /><Text style={styles.status}>Código privado: {selectedMatch.invitation_code || '-'}</Text>{participants.map((p) => <View key={p.id} style={styles.moduleButton}><Text style={styles.cardTitle}>Jugador #{p.user_id}</Text><Text style={styles.moduleText}>Estado: {p.status}</Text><Text style={styles.moduleText}>Pago: {p.payment_status}</Text><Text style={styles.moduleText}>Validación: {p.payment_validation_status || '-'}</Text>{p.payment_status !== 'paid' && <TouchableOpacity style={styles.primaryButton} onPress={() => registerPayment(p.id)}><Text style={styles.buttonText}>Registrar pago manual</Text></TouchableOpacity>}</View>)}</View>;
 
   function renderContent() {
     if (section === 'create') return <CaptainCreateMatchPage styles={styles} title={title} setTitle={setTitle} matchDate={matchDate} setMatchDate={setMatchDate} matchTime={matchTime} setMatchTime={setMatchTime} location={location} setLocation={setLocation} maxPlayers={maxPlayers} setMaxPlayers={setMaxPlayers} fee={fee} setFee={setFee} paymentDeadline={paymentDeadline} setPaymentDeadline={setPaymentDeadline} onCreate={createMatch} />;
@@ -109,9 +92,16 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
     return <CaptainDashboardHome styles={styles} matches={matches} summary={summary} pendingPaymentsCount={pendingPayments.length || summary?.pending_validation_players || 0} onNavigate={setSection} />;
   }
 
-  return <ScrollView><Text style={styles.title}>Capitán / gestor</Text><Text style={styles.subtitle}>Convocatorias privadas, pagos y reserva oficial.</Text>
-    {(['home','create','matches','payments','official'] as CaptainSection[]).map((item) => <TouchableOpacity key={item} style={section === item ? styles.primaryButton : styles.secondaryButton} onPress={() => setSection(item)}><Text style={styles.buttonText}>{item === 'home' ? 'Inicio' : item === 'create' ? 'Nueva convocatoria' : item === 'matches' ? 'Mis convocatorias' : item === 'payments' ? 'Validar pagos' : 'Reserva oficial'}</Text></TouchableOpacity>)}
-    {renderContent()}{!!message && <Text style={styles.status}>{message}</Text>}
+  return <ScrollView>
+    <SportsHero eyebrow="CAPITÁN / GESTOR" title="Tu equipo, tu partido" subtitle="Convoca jugadores, controla pagos y asegura la cancha para el próximo encuentro." icon="🧢" badge={`${matches.length} convocatorias`} />
+    <SportsSectionTitle title="Centro de juego" subtitle="Todo lo que necesitas para organizar tu partido" icon="⚡" />
+    <SportsAction styles={styles} icon="🏠" title="Resumen" description="Indicadores y próximos pasos." onPress={() => setSection('home')} active={section === 'home'} />
+    <SportsAction styles={styles} icon="➕" title="Nueva convocatoria" description="Crea un partido y comparte el código." onPress={() => setSection('create')} active={section === 'create'} accent="blue" />
+    <SportsAction styles={styles} icon="📋" title="Mis convocatorias" description="Revisa jugadores, cupos y estado." onPress={() => setSection('matches')} active={section === 'matches'} accent="amber" />
+    <SportsAction styles={styles} icon="💳" title="Validar pagos" description="Confirma aportes de los participantes." onPress={() => setSection('payments')} active={section === 'payments'} accent="violet" />
+    <SportsAction styles={styles} icon="🏟️" title="Reserva oficial" description="Asocia una convocatoria con cancha y horario." onPress={() => setSection('official')} active={section === 'official'} accent="green" />
+    <View style={{ marginTop: 22 }}>{renderContent()}</View>
+    {!!message && <Text style={styles.status}>{message}</Text>}
     <TouchableOpacity style={styles.secondaryButton} onPress={onBack}><Text style={styles.buttonText}>Volver</Text></TouchableOpacity>
   </ScrollView>;
 }
