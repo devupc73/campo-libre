@@ -53,21 +53,19 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
     setSelectedMatch(match);
     try {
       const participantsResponse = await fetch(`${API_URL}/match-participants?match_id=${match.id}`);
-      setParticipants(Array.isArray(await participantsResponse.json()) ? await (async () => [])() : []);
-    } catch {}
-    try {
-      const participantsResponse = await fetch(`${API_URL}/match-participants?match_id=${match.id}`);
       const participantsData = await participantsResponse.json();
       setParticipants(Array.isArray(participantsData) ? participantsData : []);
       const summaryResponse = await fetch(`${API_URL}/matches/${match.id}/summary`);
-      setSummary(await summaryResponse.json()); setSection(nextSection);
+      setSummary(await summaryResponse.json());
+      setSection(nextSection);
     } catch { setMessage('No se pudo cargar el detalle de la convocatoria'); }
   }
 
   async function registerPayment(participantId: number) {
     try {
       await fetch(`${API_URL}/match-participants/${participantId}/payment`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ payment_method: 'yape', paid_amount: Number(selectedMatch?.player_fee || 0) }) });
-      if (selectedMatch) await openMatch(selectedMatch, 'participants'); await loadMatches();
+      if (selectedMatch) await openMatch(selectedMatch, 'participants');
+      await loadMatches();
     } catch { setMessage('No se pudo registrar el pago'); }
   }
 
@@ -76,7 +74,8 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
       const response = await fetch(`${API_URL}/match-participants/${participantId}/payment-validation`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ payment_validation_status: status }) });
       if (!response.ok) throw new Error();
       setMessage(status === 'validated' ? 'Pago validado correctamente.' : status === 'observed' ? 'Pago observado.' : 'Pago rechazado.');
-      if (selectedMatch) await openMatch(selectedMatch, 'payments'); await loadMatches();
+      if (selectedMatch) await openMatch(selectedMatch, 'payments');
+      await loadMatches();
     } catch { setMessage('No se pudo actualizar la validación del pago'); }
   }
 
