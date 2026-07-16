@@ -33,6 +33,76 @@ function hasValidCoordinates(item: any) {
   return Number.isFinite(Number(item?.latitude)) && Number.isFinite(Number(item?.longitude));
 }
 
+function buildMapDocument(position: Coordinates, rankedComplexes: any[]) {
+  const points = rankedComplexes
+    .map((complex, index) => ({
+      number: index + 1,
+      name: String(complex.name || `Complejo ${index + 1}`),
+      address: String(complex.address || 'Dirección no registrada'),
+      latitude: Number(complex.latitude),
+      longitude: Number(complex.longitude),
+      distance: complex.distance == null ? null : Number(complex.distance),
+    }))
+    .filter((point) => Number.isFinite(point.latitude) && Number.isFinite(point.longitude));
+
+  const safePoints = JSON.stringify(points).replace(/</g, '\\u003c');
+  const safePosition = JSON.stringify(position).replace(/</g, '\\u003c');
+
+  return `<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <style>
+    html, body, #map { height: 100%; margin: 0; background: #0b1728; }
+    .number-marker, .reference-marker {
+      width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      color: white; font: 800 15px/1 Arial, sans-serif; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,.45);
+    }
+    .number-marker { background: #16a34a; }
+    .reference-marker { background: #2563eb; }
+    .leaflet-popup-content { font: 14px/1.45 Arial, sans-serif; min-width: 180px; }
+    .leaflet-popup-content strong { font-size: 15px; }
+  </style>
+</head>
+<body>
+  <div id="map" aria-label="Mapa de complejos deportivos cercanos"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script>
+    const position = ${safePosition};
+    const points = ${safePoints};
+    const map = L.map('map', { scrollWheelZoom: true }).setView([position.latitude, position.longitude], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const bounds = [[position.latitude, position.longitude]];
+    const referenceIcon = L.divIcon({ className: '', html: '<div class="reference-marker">R</div>', iconSize: [32, 32], iconAnchor: [16, 16] });
+    L.marker([position.latitude, position.longitude], { icon: referenceIcon })
+      .addTo(map)
+      .bindPopup('<strong>Posición referencial</strong>');
+
+    points.forEach((point) => {
+      const icon = L.divIcon({ className: '', html: '<div class="number-marker">' + point.number + '</div>', iconSize: [32, 32], iconAnchor: [16, 16] });
+      const distance = point.distance == null ? 'Sin distancia calculada' : point.distance.toFixed(point.distance < 10 ? 1 : 0) + ' km';
+      L.marker([point.latitude, point.longitude], { icon })
+        .addTo(map)
+        .bindPopup('<strong>' + point.number + '. ' + escapeHtml(point.name) + '</strong><br>' + escapeHtml(point.address) + '<br>' + distance);
+      bounds.push([point.latitude, point.longitude]);
+    });
+
+    if (bounds.length > 1) map.fitBounds(bounds, { padding: [38, 38], maxZoom: 15 });
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
+    }
+  </script>
+</body>
+</html>`;
+}
+
 export default function CaptainNearbyComplexes({ styles }: any) {
   const [complexes, setComplexes] = useState<any[]>([]);
   const [courts, setCourts] = useState<any[]>([]);
@@ -96,7 +166,7 @@ export default function CaptainNearbyComplexes({ styles }: any) {
         setPosition(current);
         setManualLatitude(String(current.latitude.toFixed(6)));
         setManualLongitude(String(current.longitude.toFixed(6)));
-        setLocationStatus('Lista ordenada desde tu posición actual.');
+        setLocationStatus('Mapa y lista ordenados desde tu posición actual.');
       },
       (error) => {
         setLocationStatus(error.code === 1
@@ -121,7 +191,7 @@ export default function CaptainNearbyComplexes({ styles }: any) {
     }
 
     setPosition({ latitude, longitude });
-    setLocationStatus('Lista ordenada desde la posición referencial ingresada.');
+    setLocationStatus('Mapa y lista ordenados desde la posición referencial ingresada.');
   }
 
   const rankedComplexes = useMemo(() => complexes.map((complex) => {
@@ -144,6 +214,8 @@ export default function CaptainNearbyComplexes({ styles }: any) {
     return a.distance - b.distance;
   }), [complexes, courts, position]);
 
+  const mapDocument = useMemo(() => position ? buildMapDocument(position, rankedComplexes) : '', [position, rankedComplexes]);
+
   function openMap(complex: any) {
     const query = hasValidCoordinates(complex)
       ? `${complex.latitude},${complex.longitude}`
@@ -152,7 +224,7 @@ export default function CaptainNearbyComplexes({ styles }: any) {
   }
 
   return <View>
-    <SportsSectionTitle title="Complejos cercanos" subtitle="Compara distancia y precio promedio por hora." icon="📍" />
+    <SportsSectionTitle title="Complejos cercanos" subtitle="Compara ubicación, distancia y precio promedio por hora." icon="📍" />
 
     <View style={{ backgroundColor: '#10243a', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#2b4967', marginBottom: 14 }}>
       <Text style={styles.cardTitle}>Posición referencial</Text>
@@ -181,6 +253,23 @@ export default function CaptainNearbyComplexes({ styles }: any) {
       </TouchableOpacity>
       <Text style={styles.status}>{locationStatus}</Text>
     </View>
+
+    {position && Platform.OS === 'web' && mapDocument
+      ? <View style={{ marginBottom: 16, overflow: 'hidden', borderRadius: 16, borderWidth: 1, borderColor: '#2b4967', backgroundColor: '#10243a', padding: 10 }}>
+          <Text style={styles.cardTitle}>Mapa de complejos cercanos</Text>
+          <Text style={styles.moduleText}>R = posición referencial. Los números coinciden con el orden de la lista.</Text>
+          {React.createElement('iframe', {
+            srcDoc: mapDocument,
+            title: 'Mapa numerado de complejos deportivos cercanos',
+            width: '100%',
+            height: '420',
+            style: { border: 0, borderRadius: 12, marginTop: 12 },
+            loading: 'lazy',
+          })}
+        </View>
+      : null}
+
+    {position && Platform.OS !== 'web' && <Text style={styles.status}>El mapa interactivo está disponible en la versión web. La lista mantiene las distancias calculadas.</Text>}
 
     <TouchableOpacity style={styles.secondaryButton} onPress={loadData}>
       <Text style={styles.buttonText}>{loading ? 'Cargando complejos...' : 'Actualizar complejos'}</Text>
