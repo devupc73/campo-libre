@@ -5,6 +5,15 @@ import ComplexLocationCard from './ComplexLocationCard';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 
+async function responseMessage(response: Response) {
+  try {
+    const data = await response.json();
+    return data.detail || data.message || `Error HTTP ${response.status}`;
+  } catch {
+    return `Error HTTP ${response.status}`;
+  }
+}
+
 export default function SystemComplexManagement({ styles, systemAdminId }: any) {
   const [complexes, setComplexes] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -18,14 +27,16 @@ export default function SystemComplexManagement({ styles, systemAdminId }: any) 
 
   async function loadData() {
     try {
-      const complexResponse = await fetch(`${API_URL}/sports-complexes`);
+      const complexResponse = await fetch(`${API_URL}/sports-complexes?include_inactive=true`);
       const userResponse = await fetch(`${API_URL}/users/`);
+      if (!complexResponse.ok) throw new Error(await responseMessage(complexResponse));
+      if (!userResponse.ok) throw new Error(await responseMessage(userResponse));
       const complexData = await complexResponse.json();
       const userData = await userResponse.json();
       setComplexes(Array.isArray(complexData) ? complexData : []);
       setUsers(Array.isArray(userData) ? userData : []);
-    } catch {
-      setMessage('No se pudo cargar complejos o usuarios.');
+    } catch (error: any) {
+      setMessage(error.message || 'No se pudo cargar complejos o usuarios.');
     }
   }
 
@@ -46,7 +57,7 @@ export default function SystemComplexManagement({ styles, systemAdminId }: any) 
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ complex_id: complexId, admin_user_id: Number(complexAdminId) }),
     });
-    if (!response.ok) throw new Error('assignment_failed');
+    if (!response.ok) throw new Error(await responseMessage(response));
   }
 
   async function saveComplex(update = false) {
@@ -59,24 +70,52 @@ export default function SystemComplexManagement({ styles, systemAdminId }: any) 
       };
       const url = update && selectedComplex ? `${API_URL}/sports-complexes/${selectedComplex.id}` : `${API_URL}/sports-complexes`;
       const response = await fetch(url, { method: update ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      if (!response.ok) throw new Error('complex_failed');
+      if (!response.ok) throw new Error(await responseMessage(response));
       const data = await response.json();
       await saveAssignment(data.id);
       fillComplex(data);
       setMessage(`Complejo guardado y administrador asignado. ID ${data.id}`);
-      loadData();
-    } catch {
-      setMessage('No se pudo guardar el complejo o asignar administrador.');
+      await loadData();
+    } catch (error: any) {
+      setMessage(error.message || 'No se pudo guardar el complejo o asignar administrador.');
     }
   }
+
+  async function changeStatus(status: 'active' | 'inactive') {
+    if (!selectedComplex) {
+      setMessage('Selecciona un complejo antes de cambiar su estado.');
+      return;
+    }
+
+    setMessage(status === 'inactive' ? 'Desactivando complejo...' : 'Reactivando complejo...');
+    try {
+      const response = await fetch(`${API_URL}/sports-complexes/${selectedComplex.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, system_admin_user_id: Number(systemAdminId) }),
+      });
+      if (!response.ok) throw new Error(await responseMessage(response));
+      const updated = await response.json();
+      fillComplex(updated);
+      await loadData();
+      setMessage(status === 'inactive'
+        ? 'Complejo desactivado. Ya no será visible para jugadores, gestores ni administradores de complejo.'
+        : 'Complejo reactivado y disponible nuevamente.');
+    } catch (error: any) {
+      setMessage(error.message || 'No se pudo actualizar el estado del complejo.');
+    }
+  }
+
+  const selectedStatus = String(selectedComplex?.status || 'active').toLowerCase();
 
   return (
     <View>
       <Text style={styles.title}>Gestión de complejos</Text>
-      <Text style={styles.subtitle}>Crea complejos, valida su geoposición y asigna administradores operativos.</Text>
+      <Text style={styles.subtitle}>Crea complejos, valida su geoposición, asigna administradores y controla su disponibilidad.</Text>
       <ComboSelect styles={styles} label="Seleccionar complejo existente" value={selectedComplex ? String(selectedComplex.id) : ''}
-        options={complexes.map((item) => ({ label: `${item.name} (${item.address})`, value: String(item.id) }))}
+        options={complexes.map((item) => ({ label: `${item.name} · ${String(item.status || 'active').toLowerCase() === 'inactive' ? 'INACTIVO' : 'ACTIVO'} (${item.address})`, value: String(item.id) }))}
         onChange={(value) => fillComplex(complexes.find((item) => String(item.id) === value))} />
+      {!!selectedComplex && <Text style={styles.status}>Estado actual: {selectedStatus === 'inactive' ? 'INACTIVO' : 'ACTIVO'}</Text>}
       <TextInput style={styles.input} placeholder="Nombre complejo" placeholderTextColor="#64748b" value={complexName} onChangeText={setComplexName} />
       <TextInput style={styles.input} placeholder="Dirección" placeholderTextColor="#64748b" value={complexAddress} onChangeText={setComplexAddress} />
       <TextInput style={styles.input} placeholder="Latitud" placeholderTextColor="#64748b" value={complexLat} onChangeText={setComplexLat} />
@@ -87,6 +126,8 @@ export default function SystemComplexManagement({ styles, systemAdminId }: any) 
         onChange={setComplexAdminId} />
       <TouchableOpacity style={styles.primaryButton} onPress={() => saveComplex(false)}><Text style={styles.buttonText}>Crear complejo</Text></TouchableOpacity>
       <TouchableOpacity style={styles.secondaryButton} onPress={() => saveComplex(true)}><Text style={styles.buttonText}>Actualizar complejo seleccionado</Text></TouchableOpacity>
+      {selectedComplex && selectedStatus !== 'inactive' && <TouchableOpacity style={styles.dangerButton} onPress={() => changeStatus('inactive')}><Text style={styles.buttonText}>Desactivar complejo</Text></TouchableOpacity>}
+      {selectedComplex && selectedStatus === 'inactive' && <TouchableOpacity style={styles.primaryButton} onPress={() => changeStatus('active')}><Text style={styles.buttonText}>Reactivar complejo</Text></TouchableOpacity>}
       {!!message && <Text style={styles.status}>{message}</Text>}
     </View>
   );
