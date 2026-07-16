@@ -37,23 +37,44 @@ export default function CaptainNearbyComplexes({ styles }: any) {
   const [position, setPosition] = useState<Coordinates | null>(null);
   const [locationStatus, setLocationStatus] = useState('Solicita tu ubicación para ordenar los complejos por cercanía.');
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
+    setLoading(true);
+    setMessage('');
+
     try {
-      const [complexResponse, courtResponse] = await Promise.all([
-        fetch(`${API_URL}/sports-complexes`),
-        fetch(`${API_URL}/courts`),
-      ]);
+      const complexResponse = await fetch(`${API_URL}/sports-complexes`);
       if (!complexResponse.ok) throw new Error(await responseError(complexResponse));
-      if (!courtResponse.ok) throw new Error(await responseError(courtResponse));
       const complexData = await complexResponse.json();
-      const courtData = await courtResponse.json();
-      setComplexes(Array.isArray(complexData) ? complexData.filter((item) => item.status !== 'inactive') : []);
-      setCourts(Array.isArray(courtData) ? courtData.filter((item) => item.status !== 'inactive') : []);
+      const activeComplexes = Array.isArray(complexData)
+        ? complexData.filter((item) => String(item?.status || 'active').toLowerCase() !== 'inactive')
+        : [];
+      setComplexes(activeComplexes);
+
+      try {
+        const courtResponse = await fetch(`${API_URL}/courts/`);
+        if (!courtResponse.ok) throw new Error(await responseError(courtResponse));
+        const courtData = await courtResponse.json();
+        setCourts(Array.isArray(courtData)
+          ? courtData.filter((item) => String(item?.status || 'available').toLowerCase() !== 'inactive')
+          : []);
+      } catch (courtError: any) {
+        setCourts([]);
+        setMessage(`Se cargaron ${activeComplexes.length} complejos, pero no fue posible obtener el detalle de sus campos. ${courtError.message || ''}`.trim());
+      }
+
+      if (!activeComplexes.length) {
+        setMessage('El API respondió correctamente, pero no existen complejos deportivos activos registrados.');
+      }
     } catch (error: any) {
+      setComplexes([]);
+      setCourts([]);
       setMessage(error.message || 'No se pudieron cargar los complejos deportivos.');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -104,8 +125,9 @@ export default function CaptainNearbyComplexes({ styles }: any) {
   return <View>
     <SportsSectionTitle title="Complejos cercanos" subtitle="Compara ubicación, campos y capacidad antes de asociar tu convocatoria." icon="📍" />
     <TouchableOpacity style={styles.primaryButton} onPress={requestLocation}><Text style={styles.buttonText}>Usar mi ubicación actual</Text></TouchableOpacity>
-    <TouchableOpacity style={styles.secondaryButton} onPress={loadData}><Text style={styles.buttonText}>Actualizar complejos</Text></TouchableOpacity>
+    <TouchableOpacity style={styles.secondaryButton} onPress={loadData}><Text style={styles.buttonText}>{loading ? 'Cargando complejos...' : 'Actualizar complejos'}</Text></TouchableOpacity>
     <Text style={styles.status}>{locationStatus}</Text>
+    <Text style={styles.muted}>{loading ? 'Consultando complejos registrados...' : `${rankedComplexes.length} complejo(s) disponible(s)`}</Text>
 
     <ScrollView style={{ maxHeight: 760 }}>
       {rankedComplexes.map((complex, index) => <View key={complex.id} style={{ ...styles.moduleButton, marginBottom: 16, padding: 20 } as any}>
@@ -128,14 +150,14 @@ export default function CaptainNearbyComplexes({ styles }: any) {
           <Text style={styles.cardTitle}>{court.name}</Text>
           <Text style={styles.moduleText}>{court.sport} · Capacidad: {court.capacity} · S/ {court.price_per_hour || 0} por hora</Text>
         </View>)}
-        {!complex.complexCourts.length && <Text style={styles.muted}>Este complejo todavía no tiene campos activos registrados.</Text>}
+        {!complex.complexCourts.length && <Text style={styles.muted}>Este complejo todavía no tiene campos activos registrados o no fue posible cargar su detalle.</Text>}
 
         <ComplexLocationCard styles={styles} complex={complex} title="Ubicación del complejo" compact />
         <TouchableOpacity style={styles.primaryButton} onPress={() => openDirections(complex)}><Text style={styles.buttonText}>Cómo llegar desde mi ubicación</Text></TouchableOpacity>
       </View>)}
     </ScrollView>
 
-    {!rankedComplexes.length && <Text style={styles.muted}>No hay complejos deportivos activos registrados.</Text>}
+    {!loading && !rankedComplexes.length && <Text style={styles.muted}>No hay complejos deportivos activos registrados.</Text>}
     {!!message && <Text style={styles.status}>{message}</Text>}
   </View>;
 }
