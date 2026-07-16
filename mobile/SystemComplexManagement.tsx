@@ -90,7 +90,7 @@ export default function SystemComplexManagement({ styles, systemAdminId }: any) 
     setMessage(status === 'inactive' ? 'Desactivando complejo...' : 'Reactivando complejo...');
     try {
       const response = await fetch(`${API_URL}/sports-complexes/${selectedComplex.id}/status`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status, system_admin_user_id: Number(systemAdminId) }),
       });
