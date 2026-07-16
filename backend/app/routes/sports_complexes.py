@@ -1,3 +1,10 @@
+import json
+from urllib.error import HTTPError
+from urllib.error import URLError
+from urllib.parse import urlencode
+from urllib.request import Request
+from urllib.request import urlopen
+
 from fastapi import APIRouter
 from fastapi import HTTPException
 from pydantic import BaseModel
@@ -29,6 +36,51 @@ def apply_payload(complex_item: SportsComplex, payload: SportsComplexCreate):
     complex_item.image_url = payload.image_url
     complex_item.rating = payload.rating
     return complex_item
+
+
+@router.get('/geocode')
+def geocode_address(address: str):
+    normalized_address = address.strip()
+    if len(normalized_address) < 5:
+        raise HTTPException(status_code=400, detail='Ingresa una dirección más específica')
+
+    query = urlencode({
+        'q': normalized_address,
+        'format': 'jsonv2',
+        'limit': 1,
+        'addressdetails': 1,
+        'countrycodes': 'pe',
+    })
+    request = Request(
+        f'https://nominatim.openstreetmap.org/search?{query}',
+        headers={
+            'User-Agent': 'CampoLibre/1.0 (sports-complex-geocoding)',
+            'Accept-Language': 'es',
+        },
+    )
+
+    try:
+        with urlopen(request, timeout=12) as response:
+            results = json.loads(response.read().decode('utf-8'))
+    except (HTTPError, URLError, TimeoutError, ValueError) as error:
+        raise HTTPException(status_code=502, detail='No fue posible consultar el servicio de ubicación') from error
+
+    if not results:
+        raise HTTPException(status_code=404, detail='No se encontró la dirección. Agrega distrito, provincia y país')
+
+    result = results[0]
+    try:
+        latitude = float(result['lat'])
+        longitude = float(result['lon'])
+    except (KeyError, TypeError, ValueError) as error:
+        raise HTTPException(status_code=502, detail='El servicio de ubicación devolvió coordenadas inválidas') from error
+
+    return {
+        'address': normalized_address,
+        'display_name': result.get('display_name', normalized_address),
+        'latitude': latitude,
+        'longitude': longitude,
+    }
 
 
 @router.get('')
