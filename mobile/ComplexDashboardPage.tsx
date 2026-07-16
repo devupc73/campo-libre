@@ -11,8 +11,8 @@ export default function ComplexDashboardPage({ styles, selectedComplex, onNaviga
         styles={styles}
         items={[
           { label: 'Complejo', value: selectedComplex?.name ? 'Activo' : 'Pendiente', description: 'Estado de selección' },
-          { label: 'Gestión', value: 'Operativa', description: 'Campos, calendario y pagos' },
-          { label: 'Pagos', value: 'Validación', description: 'Pagos de capitanes' },
+          { label: 'Gestión', value: 'Operativa', description: 'Campos y calendario' },
+          { label: 'Pagos', value: 'Por validar', description: 'Pagos de gestores' },
         ]}
       />
       <TouchableOpacity style={styles.moduleButton} onPress={() => onNavigate('settings')}>
@@ -27,9 +27,13 @@ export default function ComplexDashboardPage({ styles, selectedComplex, onNaviga
         <Text style={styles.moduleTitle}>Calendario semanal</Text>
         <Text style={styles.moduleText}>Franjas activas, inactivas y reservadas.</Text>
       </TouchableOpacity>
+      <TouchableOpacity style={styles.moduleButton} onPress={() => onNavigate('payments')}>
+        <Text style={styles.moduleTitle}>Pagos por validar</Text>
+        <Text style={styles.moduleText}>Validar pagos del gestor y confirmar la reserva de la franja.</Text>
+      </TouchableOpacity>
       <TouchableOpacity style={styles.moduleButton} onPress={() => onNavigate('reports')}>
-        <Text style={styles.moduleTitle}>Pagos, reservas y reportes</Text>
-        <Text style={styles.moduleText}>Validaciones y consultas operativas.</Text>
+        <Text style={styles.moduleTitle}>Reservas y reportes</Text>
+        <Text style={styles.moduleText}>Consultas e indicadores operativos.</Text>
       </TouchableOpacity>
     </View>
   );
