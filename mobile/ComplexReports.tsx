@@ -8,6 +8,15 @@ function money(value: number) {
   return `S/ ${Math.round(value || 0)}`;
 }
 
+async function responseError(response: Response) {
+  try {
+    const data = await response.json();
+    return data.detail || data.message || `Error HTTP ${response.status}`;
+  } catch {
+    return `Error HTTP ${response.status}`;
+  }
+}
+
 export default function ComplexReports({ styles, selectedComplex }: any) {
   const [courts, setCourts] = useState<any[]>([]);
   const [reservations, setReservations] = useState<any[]>([]);
@@ -26,12 +35,18 @@ export default function ComplexReports({ styles, selectedComplex }: any) {
     setMessage('Cargando reportes...');
     try {
       const [courtsRes, reservationsRes, paymentsRes, matchPaymentsRes, ratesRes] = await Promise.all([
-        fetch(`${API_URL}/courts?complex_id=${selectedComplex.id}`),
+        fetch(`${API_URL}/courts/?complex_id=${selectedComplex.id}`),
         fetch(`${API_URL}/complex-admin/reservations/${selectedComplex.id}`),
         fetch(`${API_URL}/complex-admin/payments/${selectedComplex.id}`),
         fetch(`${API_URL}/complex-admin/match-payments/${selectedComplex.id}`),
         fetch(`${API_URL}/complex-admin/court-rates/${selectedComplex.id}`),
       ]);
+
+      if (!courtsRes.ok) throw new Error(await responseError(courtsRes));
+      if (!reservationsRes.ok) throw new Error(await responseError(reservationsRes));
+      if (!paymentsRes.ok) throw new Error(await responseError(paymentsRes));
+      if (!matchPaymentsRes.ok) throw new Error(await responseError(matchPaymentsRes));
+      if (!ratesRes.ok) throw new Error(await responseError(ratesRes));
 
       setCourts(await courtsRes.json());
       setReservations(await reservationsRes.json());
@@ -39,8 +54,8 @@ export default function ComplexReports({ styles, selectedComplex }: any) {
       setMatchPayments(await matchPaymentsRes.json());
       setRates(await ratesRes.json());
       setMessage('');
-    } catch {
-      setMessage('No se pudieron cargar los reportes del complejo.');
+    } catch (error: any) {
+      setMessage(error.message || 'No se pudieron cargar los reportes del complejo.');
     }
   }
 
@@ -49,18 +64,21 @@ export default function ComplexReports({ styles, selectedComplex }: any) {
       const response = await fetch(`${API_URL}/complex-admin/match-payments/${matchId}/validation`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ complex_payment_validation_status: status }),
+        body: JSON.stringify({
+          complex_id: Number(selectedComplex.id),
+          complex_payment_validation_status: status,
+        }),
       });
 
-      if (!response.ok) throw new Error();
+      if (!response.ok) throw new Error(await responseError(response));
 
       if (status === 'validated') setMessage('Pago validado. La franja quedó marcada como reservada.');
       if (status === 'observed') setMessage('Pago observado.');
       if (status === 'rejected') setMessage('Pago rechazado.');
 
       await loadReports();
-    } catch {
-      setMessage('No se pudo actualizar la validación del pago al complejo.');
+    } catch (error: any) {
+      setMessage(error.message || 'No se pudo actualizar la validación del pago al complejo.');
     }
   }
 
@@ -97,7 +115,7 @@ export default function ComplexReports({ styles, selectedComplex }: any) {
         ]}
       />
 
-      <Text style={styles.title}>Pagos de capitanes por validar</Text>
+      <Text style={styles.title}>Pagos de gestores</Text>
       <ScrollView style={{ maxHeight: 360 }}>
         {matchPayments.map((item) => {
           const court = courts.find((courtItem) => Number(courtItem.id) === Number(item.court_id));
