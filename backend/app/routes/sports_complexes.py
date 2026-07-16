@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from fastapi import HTTPException
 from pydantic import BaseModel
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
@@ -35,7 +36,7 @@ def list_complexes(include_inactive: bool = False):
     db: Session = SessionLocal()
     query = db.query(SportsComplex)
     if not include_inactive:
-        query = query.filter(SportsComplex.status != 'inactive')
+        query = query.filter(or_(SportsComplex.status.is_(None), SportsComplex.status != 'inactive'))
     return query.order_by(SportsComplex.name.asc()).all()
 
 
