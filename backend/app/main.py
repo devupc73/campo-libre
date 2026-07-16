@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+from sqlalchemy import text
 
 from app.database import Base
 from app.database import engine
@@ -36,6 +37,8 @@ from app.routes.user_rates import router as user_rates_router
 from app.routes.users import router as users_router
 
 Base.metadata.create_all(bind=engine)
+with engine.begin() as connection:
+    connection.execute(text('ALTER TABLE sports_complexes ADD COLUMN IF NOT EXISTS logo_url TEXT'))
 
 app = FastAPI(title='Campo Libre API')
 
@@ -56,7 +59,7 @@ async def add_defensive_cors_headers(request: Request, call_next):
         response = await call_next(request)
 
     response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,DELETE,OPTIONS'
+    response.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,PATCH,DELETE,OPTIONS'
     response.headers['Access-Control-Allow-Headers'] = '*'
     response.headers['Access-Control-Max-Age'] = '86400'
     return response

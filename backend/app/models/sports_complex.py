@@ -2,6 +2,7 @@ from sqlalchemy import Column
 from sqlalchemy import Float
 from sqlalchemy import Integer
 from sqlalchemy import String
+from sqlalchemy import Text
 
 from app.database import Base
 
@@ -18,6 +19,7 @@ class SportsComplex(Base):
     complex_admin_user_id = Column(Integer, nullable=True)
     description = Column(String, nullable=True)
     phone = Column(String, nullable=True)
-    image_url = Column(String, nullable=True)
+    image_url = Column(Text, nullable=True)
+    logo_url = Column(Text, nullable=True)
     rating = Column(Float, default=0)
     status = Column(String, default='active')

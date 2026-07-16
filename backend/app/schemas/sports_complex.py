@@ -11,6 +11,7 @@ class SportsComplexCreate(BaseModel):
     description: str | None = None
     phone: str | None = None
     image_url: str | None = None
+    logo_url: str | None = None
     rating: float = 0
 
 
@@ -25,6 +26,7 @@ class SportsComplexResponse(BaseModel):
     description: str | None = None
     phone: str | None = None
     image_url: str | None = None
+    logo_url: str | None = None
     rating: float
     status: str
 
