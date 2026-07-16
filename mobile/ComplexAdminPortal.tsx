@@ -4,6 +4,7 @@ import ComplexCalendarPage from './ComplexCalendarPage';
 import ComplexDashboardPage from './ComplexDashboardPage';
 import ComplexFieldsPage from './ComplexFieldsPage';
 import ComplexLocationCard from './ComplexLocationCard';
+import ComplexPaymentValidationPanel from './ComplexPaymentValidationPanel';
 import ComplexReports from './ComplexReports';
 import ComplexSelector from './ComplexSelector';
 import ComplexSettingsPage from './ComplexSettingsPage';
@@ -11,7 +12,7 @@ import { SportsAction, SportsHero, SportsSectionTitle } from './SportsBrand';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 type Props = { styles: any; onLogout: () => void };
-type Section = 'dashboard' | 'settings' | 'fields' | 'calendar' | 'reports';
+type Section = 'dashboard' | 'settings' | 'fields' | 'calendar' | 'payments' | 'reports';
 
 export default function ComplexAdminPortal({ styles, onLogout }: Props) {
   const [email, setEmail] = useState('');
@@ -51,6 +52,7 @@ export default function ComplexAdminPortal({ styles, onLogout }: Props) {
     if (activeSection === 'settings') return <ComplexSettingsPage styles={styles} selectedComplex={selectedComplex} />;
     if (activeSection === 'fields') return <ComplexFieldsPage styles={styles} selectedComplex={selectedComplex} selectedCourtId={selectedCourtId} onSelectCourt={setSelectedCourtId} />;
     if (activeSection === 'calendar') return <ComplexCalendarPage styles={styles} selectedComplex={selectedComplex} courtId={selectedCourtId} onSelectCourt={setSelectedCourtId} />;
+    if (activeSection === 'payments') return <ComplexPaymentValidationPanel styles={styles} selectedComplex={selectedComplex} />;
     if (activeSection === 'reports') return <ComplexReports styles={styles} selectedComplex={selectedComplex} />;
     return <ComplexDashboardPage styles={styles} selectedComplex={selectedComplex} onNavigate={setActiveSection} />;
   }
@@ -77,6 +79,7 @@ export default function ComplexAdminPortal({ styles, onLogout }: Props) {
     <SportsAction styles={styles} icon="📝" title="Datos del complejo" description="Información comercial y de contacto." onPress={() => setActiveSection('settings')} active={activeSection === 'settings'} accent="blue" />
     <SportsAction styles={styles} icon="🥅" title="Campos deportivos" description="Crea, modifica y administra tus canchas." onPress={() => setActiveSection('fields')} active={activeSection === 'fields'} accent="amber" />
     <SportsAction styles={styles} icon="📅" title="Calendario semanal" description="Disponibilidad, tarifas y franjas." onPress={() => setActiveSection('calendar')} active={activeSection === 'calendar'} accent="green" />
+    <SportsAction styles={styles} icon="💳" title="Pagos por validar" description="Aprueba, observa o rechaza pagos de gestores y reserva la franja." onPress={() => setActiveSection('payments')} active={activeSection === 'payments'} accent="amber" />
     <SportsAction styles={styles} icon="📈" title="Reportes y consultas" description="Indicadores para tomar mejores decisiones." onPress={() => setActiveSection('reports')} active={activeSection === 'reports'} accent="violet" />
     <View style={{ marginTop: 22 }}>{renderSection()}</View>
     <TouchableOpacity style={styles.secondaryButton} onPress={() => setSelectedComplex(null)}><Text style={styles.buttonText}>Cambiar complejo</Text></TouchableOpacity>
