@@ -64,7 +64,7 @@ def update_complex(complex_id: int, payload: SportsComplexCreate):
     return complex_item
 
 
-@router.patch('/{complex_id}/status')
+@router.put('/{complex_id}/status')
 def update_complex_status(complex_id: int, payload: SportsComplexStatusUpdate):
     db: Session = SessionLocal()
 
