@@ -34,6 +34,7 @@ def apply_payload(complex_item: SportsComplex, payload: SportsComplexCreate):
     complex_item.description = payload.description
     complex_item.phone = payload.phone
     complex_item.image_url = payload.image_url
+    complex_item.logo_url = payload.logo_url
     complex_item.rating = payload.rating
     return complex_item
 
