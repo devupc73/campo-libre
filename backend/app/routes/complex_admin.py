@@ -145,10 +145,14 @@ def get_complex_payments(complex_id: int):
 @router.get('/match-payments/{complex_id}')
 def get_match_payments_for_complex(complex_id: int):
     db: Session = SessionLocal()
+    complex_item = db.query(SportsComplex).filter(SportsComplex.id == complex_id).first()
+    if not complex_item:
+        raise HTTPException(status_code=404, detail='Complejo no encontrado')
+
     return db.query(Match).filter(
         Match.sports_complex_id == complex_id,
         Match.paid_to_complex > 0,
-    ).all()
+    ).order_by(Match.id.desc()).all()
 
 
 @router.put('/match-payments/{match_id}/validation')
@@ -159,22 +163,47 @@ def validate_match_payment(match_id: int, payload: dict):
     if not match:
         raise HTTPException(status_code=404, detail='Convocatoria no encontrada')
 
+    complex_id = payload.get('complex_id')
+    if not complex_id:
+        raise HTTPException(status_code=400, detail='El complejo es obligatorio para validar el pago')
+
+    if int(match.sports_complex_id or 0) != int(complex_id):
+        raise HTTPException(status_code=403, detail='La convocatoria no pertenece al complejo seleccionado')
+
     validation_status = payload.get('complex_payment_validation_status')
     if validation_status not in ['validated', 'observed', 'rejected', 'pending_validation']:
         raise HTTPException(status_code=400, detail='Estado de validación inválido')
 
+    if not match.paid_to_complex or float(match.paid_to_complex) <= 0:
+        raise HTTPException(status_code=400, detail='La convocatoria no tiene un pago registrado hacia el complejo')
+
+    if not match.court_id or not match.schedule_id:
+        raise HTTPException(status_code=400, detail='La convocatoria debe estar asociada a un campo y una franja')
+
+    court = db.query(Court).filter(Court.id == match.court_id).first()
+    if not court or int(court.complex_id or 0) != int(complex_id):
+        raise HTTPException(status_code=400, detail='El campo asociado no pertenece al complejo')
+
+    schedule = db.query(CourtSchedule).filter(CourtSchedule.id == match.schedule_id).first()
+    if not schedule or int(schedule.court_id or 0) != int(match.court_id):
+        raise HTTPException(status_code=400, detail='La franja asociada no pertenece al campo')
+
     match.complex_payment_validation_status = validation_status
 
-    if validation_status == 'validated' and match.schedule_id:
-        schedule = db.query(CourtSchedule).filter(CourtSchedule.id == match.schedule_id).first()
-        if schedule:
-            schedule.status = 'reserved'
-
-    if validation_status in ['rejected', 'observed'] and match.schedule_id:
-        schedule = db.query(CourtSchedule).filter(CourtSchedule.id == match.schedule_id).first()
-        if schedule and schedule.status == 'reserved':
-            schedule.status = 'active'
+    if validation_status == 'validated':
+        schedule.status = 'reserved'
+    elif validation_status in ['rejected', 'observed'] and schedule.status == 'reserved':
+        schedule.status = 'active'
 
     db.commit()
     db.refresh(match)
-    return match
+
+    return {
+        'id': match.id,
+        'sports_complex_id': match.sports_complex_id,
+        'court_id': match.court_id,
+        'schedule_id': match.schedule_id,
+        'complex_payment_validation_status': match.complex_payment_validation_status,
+        'schedule_status': schedule.status,
+        'message': 'Validación actualizada correctamente',
+    }
