@@ -1,7 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import ComplexLocationCard from './ComplexLocationCard';
-import DashboardCards from './DashboardCards';
+import { Linking, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SportsPill, SportsSectionTitle } from './SportsBrand';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
@@ -31,11 +29,17 @@ async function responseError(response: Response) {
   }
 }
 
+function hasValidCoordinates(item: any) {
+  return Number.isFinite(Number(item?.latitude)) && Number.isFinite(Number(item?.longitude));
+}
+
 export default function CaptainNearbyComplexes({ styles }: any) {
   const [complexes, setComplexes] = useState<any[]>([]);
   const [courts, setCourts] = useState<any[]>([]);
   const [position, setPosition] = useState<Coordinates | null>(null);
-  const [locationStatus, setLocationStatus] = useState('Solicita tu ubicación para ordenar los complejos por cercanía.');
+  const [manualLatitude, setManualLatitude] = useState('');
+  const [manualLongitude, setManualLongitude] = useState('');
+  const [locationStatus, setLocationStatus] = useState('Selecciona tu ubicación actual o ingresa una posición referencial.');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -63,7 +67,7 @@ export default function CaptainNearbyComplexes({ styles }: any) {
           : []);
       } catch (courtError: any) {
         setCourts([]);
-        setMessage(`Se cargaron ${activeComplexes.length} complejos, pero no fue posible obtener el detalle de sus campos. ${courtError.message || ''}`.trim());
+        setMessage(`Se cargaron ${activeComplexes.length} complejos, pero no fue posible calcular el precio promedio. ${courtError.message || ''}`.trim());
       }
 
       if (!activeComplexes.length) {
@@ -84,29 +88,55 @@ export default function CaptainNearbyComplexes({ styles }: any) {
       setLocationStatus('La ubicación automática está disponible en la versión web del portal.');
       return;
     }
+
     setLocationStatus('Obteniendo tu posición actual...');
     navigator.geolocation.getCurrentPosition(
       (result) => {
-        setPosition({ latitude: result.coords.latitude, longitude: result.coords.longitude });
-        setLocationStatus('Complejos ordenados desde tu posición actual.');
+        const current = { latitude: result.coords.latitude, longitude: result.coords.longitude };
+        setPosition(current);
+        setManualLatitude(String(current.latitude.toFixed(6)));
+        setManualLongitude(String(current.longitude.toFixed(6)));
+        setLocationStatus('Lista ordenada desde tu posición actual.');
       },
       (error) => {
-        setLocationStatus(error.code === 1 ? 'Permiso de ubicación denegado. Habilítalo en el navegador para ordenar por cercanía.' : 'No fue posible obtener tu ubicación actual.');
+        setLocationStatus(error.code === 1
+          ? 'Permiso de ubicación denegado. Puedes ingresar una posición referencial manual.'
+          : 'No fue posible obtener tu ubicación actual. Ingresa una posición referencial manual.');
       },
       { enableHighAccuracy: true, timeout: 12000, maximumAge: 300000 },
     );
   }
 
+  function applyManualPosition() {
+    const latitude = Number(manualLatitude.replace(',', '.'));
+    const longitude = Number(manualLongitude.replace(',', '.'));
+
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+      setLocationStatus('Ingresa una latitud válida entre -90 y 90.');
+      return;
+    }
+    if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+      setLocationStatus('Ingresa una longitud válida entre -180 y 180.');
+      return;
+    }
+
+    setPosition({ latitude, longitude });
+    setLocationStatus('Lista ordenada desde la posición referencial ingresada.');
+  }
+
   const rankedComplexes = useMemo(() => complexes.map((complex) => {
     const complexCourts = courts.filter((court) => Number(court.complex_id) === Number(complex.id));
-    const validCoordinates = Number.isFinite(Number(complex.latitude)) && Number.isFinite(Number(complex.longitude));
-    const distance = position && validCoordinates
+    const prices = complexCourts
+      .map((court) => Number(court.price_per_hour))
+      .filter((price) => Number.isFinite(price) && price >= 0);
+    const averagePrice = prices.length
+      ? prices.reduce((sum, price) => sum + price, 0) / prices.length
+      : null;
+    const distance = position && hasValidCoordinates(complex)
       ? distanceKm(position, { latitude: Number(complex.latitude), longitude: Number(complex.longitude) })
       : null;
-    const totalCapacity = complexCourts.reduce((sum, court) => sum + Number(court.capacity || 0), 0);
-    const maxCourtCapacity = complexCourts.reduce((max, court) => Math.max(max, Number(court.capacity || 0)), 0);
-    const sports = Array.from(new Set(complexCourts.map((court) => court.sport).filter(Boolean)));
-    return { ...complex, distance, complexCourts, totalCapacity, maxCourtCapacity, sports };
+
+    return { ...complex, distance, averagePrice };
   }).sort((a, b) => {
     if (a.distance == null && b.distance == null) return String(a.name).localeCompare(String(b.name));
     if (a.distance == null) return 1;
@@ -114,46 +144,69 @@ export default function CaptainNearbyComplexes({ styles }: any) {
     return a.distance - b.distance;
   }), [complexes, courts, position]);
 
-  function openDirections(complex: any) {
-    const destination = Number.isFinite(Number(complex.latitude)) && Number.isFinite(Number(complex.longitude))
+  function openMap(complex: any) {
+    const query = hasValidCoordinates(complex)
       ? `${complex.latitude},${complex.longitude}`
       : complex.address || complex.name;
-    const origin = position ? `&origin=${position.latitude},${position.longitude}` : '';
-    Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}${origin}`);
+    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`);
   }
 
   return <View>
-    <SportsSectionTitle title="Complejos cercanos" subtitle="Compara ubicación, campos y capacidad antes de asociar tu convocatoria." icon="📍" />
-    <TouchableOpacity style={styles.primaryButton} onPress={requestLocation}><Text style={styles.buttonText}>Usar mi ubicación actual</Text></TouchableOpacity>
-    <TouchableOpacity style={styles.secondaryButton} onPress={loadData}><Text style={styles.buttonText}>{loading ? 'Cargando complejos...' : 'Actualizar complejos'}</Text></TouchableOpacity>
-    <Text style={styles.status}>{locationStatus}</Text>
+    <SportsSectionTitle title="Complejos cercanos" subtitle="Compara distancia y precio promedio por hora." icon="📍" />
+
+    <View style={{ backgroundColor: '#10243a', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#2b4967', marginBottom: 14 }}>
+      <Text style={styles.cardTitle}>Posición referencial</Text>
+      <TouchableOpacity style={styles.primaryButton} onPress={requestLocation}>
+        <Text style={styles.buttonText}>Usar mi ubicación actual</Text>
+      </TouchableOpacity>
+      <Text style={styles.muted}>También puedes ingresar coordenadas manualmente.</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Latitud, por ejemplo -12.046374"
+        placeholderTextColor="#718198"
+        keyboardType="numeric"
+        value={manualLatitude}
+        onChangeText={setManualLatitude}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Longitud, por ejemplo -77.042793"
+        placeholderTextColor="#718198"
+        keyboardType="numeric"
+        value={manualLongitude}
+        onChangeText={setManualLongitude}
+      />
+      <TouchableOpacity style={styles.secondaryButton} onPress={applyManualPosition}>
+        <Text style={styles.buttonText}>Usar posición ingresada</Text>
+      </TouchableOpacity>
+      <Text style={styles.status}>{locationStatus}</Text>
+    </View>
+
+    <TouchableOpacity style={styles.secondaryButton} onPress={loadData}>
+      <Text style={styles.buttonText}>{loading ? 'Cargando complejos...' : 'Actualizar complejos'}</Text>
+    </TouchableOpacity>
     <Text style={styles.muted}>{loading ? 'Consultando complejos registrados...' : `${rankedComplexes.length} complejo(s) disponible(s)`}</Text>
 
     <ScrollView style={{ maxHeight: 760 }}>
-      {rankedComplexes.map((complex, index) => <View key={complex.id} style={{ ...styles.moduleButton, marginBottom: 16, padding: 20 } as any}>
+      {rankedComplexes.map((complex, index) => <View key={complex.id} style={{ ...styles.moduleButton, marginBottom: 14, padding: 18 } as any}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
           <View style={{ flex: 1 }}>
             <Text style={styles.cardTitle}>{index + 1}. {complex.name}</Text>
             <Text style={styles.moduleText}>{complex.address || 'Dirección no registrada'}</Text>
           </View>
-          <SportsPill text={complex.distance == null ? 'Sin distancia' : `${complex.distance.toFixed(complex.distance < 10 ? 1 : 0)} km`} tone={index === 0 && complex.distance != null ? 'green' : 'blue'} />
+          <SportsPill
+            text={complex.distance == null ? 'Sin referencia' : `${complex.distance.toFixed(complex.distance < 10 ? 1 : 0)} km`}
+            tone={index === 0 && complex.distance != null ? 'green' : 'blue'}
+          />
         </View>
 
-        <DashboardCards styles={styles} items={[
-          { label: 'Campos', value: complex.complexCourts.length, description: 'Registrados' },
-          { label: 'Capacidad total', value: complex.totalCapacity, description: 'Suma referencial' },
-          { label: 'Mayor campo', value: complex.maxCourtCapacity || '-', description: 'Jugadores' },
-          { label: 'Deportes', value: complex.sports.length || '-', description: complex.sports.join(', ') || 'Sin detalle' },
-        ]} />
+        <Text style={styles.moduleText}>
+          Precio promedio por hora: {complex.averagePrice == null ? 'No disponible' : `S/ ${complex.averagePrice.toFixed(2)}`}
+        </Text>
 
-        {complex.complexCourts.map((court: any) => <View key={court.id} style={{ backgroundColor: '#10243a', borderRadius: 12, padding: 12, marginTop: 8, borderWidth: 1, borderColor: '#2b4967' }}>
-          <Text style={styles.cardTitle}>{court.name}</Text>
-          <Text style={styles.moduleText}>{court.sport} · Capacidad: {court.capacity} · S/ {court.price_per_hour || 0} por hora</Text>
-        </View>)}
-        {!complex.complexCourts.length && <Text style={styles.muted}>Este complejo todavía no tiene campos activos registrados o no fue posible cargar su detalle.</Text>}
-
-        <ComplexLocationCard styles={styles} complex={complex} title="Ubicación del complejo" compact />
-        <TouchableOpacity style={styles.primaryButton} onPress={() => openDirections(complex)}><Text style={styles.buttonText}>Cómo llegar desde mi ubicación</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.primaryButton} onPress={() => openMap(complex)}>
+          <Text style={styles.buttonText}>Ver ubicación en Google Maps</Text>
+        </TouchableOpacity>
       </View>)}
     </ScrollView>
 
