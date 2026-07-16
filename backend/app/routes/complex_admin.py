@@ -20,7 +20,8 @@ def get_admin_complexes(admin_user_id: int):
     db: Session = SessionLocal()
 
     direct_complexes = db.query(SportsComplex).filter(
-        SportsComplex.complex_admin_user_id == admin_user_id
+        SportsComplex.complex_admin_user_id == admin_user_id,
+        SportsComplex.status != 'inactive',
     ).all()
 
     try:
@@ -32,7 +33,10 @@ def get_admin_complexes(admin_user_id: int):
         complex_ids = [item.complex_id for item in assignments]
 
         if complex_ids:
-            assigned_complexes = db.query(SportsComplex).filter(SportsComplex.id.in_(complex_ids)).all()
+            assigned_complexes = db.query(SportsComplex).filter(
+                SportsComplex.id.in_(complex_ids),
+                SportsComplex.status != 'inactive',
+            ).all()
             merged = {item.id: item for item in direct_complexes + assigned_complexes}
             return list(merged.values())
     except Exception:
@@ -145,9 +149,12 @@ def get_complex_payments(complex_id: int):
 @router.get('/match-payments/{complex_id}')
 def get_match_payments_for_complex(complex_id: int):
     db: Session = SessionLocal()
-    complex_item = db.query(SportsComplex).filter(SportsComplex.id == complex_id).first()
+    complex_item = db.query(SportsComplex).filter(
+        SportsComplex.id == complex_id,
+        SportsComplex.status != 'inactive',
+    ).first()
     if not complex_item:
-        raise HTTPException(status_code=404, detail='Complejo no encontrado')
+        raise HTTPException(status_code=404, detail='Complejo no encontrado o inactivo')
 
     return db.query(Match).filter(
         Match.sports_complex_id == complex_id,
@@ -166,6 +173,13 @@ def validate_match_payment(match_id: int, payload: dict):
     complex_id = payload.get('complex_id')
     if not complex_id:
         raise HTTPException(status_code=400, detail='El complejo es obligatorio para validar el pago')
+
+    complex_item = db.query(SportsComplex).filter(
+        SportsComplex.id == complex_id,
+        SportsComplex.status != 'inactive',
+    ).first()
+    if not complex_item:
+        raise HTTPException(status_code=403, detail='El complejo está inactivo')
 
     if int(match.sports_complex_id or 0) != int(complex_id):
         raise HTTPException(status_code=403, detail='La convocatoria no pertenece al complejo seleccionado')
