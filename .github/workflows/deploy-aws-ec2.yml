@@ -52,16 +52,27 @@ jobs:
             git reset --hard origin/main
             cd deploy/aws-ec2
 
-            for domain in "$FRONTEND_DOMAIN" "$API_DOMAIN"; do
-              test -f "/etc/letsencrypt/live/$domain/fullchain.pem" || {
-                echo "Missing TLS certificate for $domain. Run certbot before deploying."
+            validate_certificate() {
+              domain="$1"
+              cert_dir="/etc/letsencrypt/live/$domain"
+
+              if ! sudo test -f "$cert_dir/fullchain.pem"; then
+                echo "Missing TLS certificate for $domain at $cert_dir/fullchain.pem"
+                echo "Available Let's Encrypt certificate directories:"
+                sudo find /etc/letsencrypt/live -mindepth 1 -maxdepth 1 -type d -printf ' - %f\n' 2>/dev/null || true
                 exit 1
-              }
-              test -f "/etc/letsencrypt/live/$domain/privkey.pem" || {
-                echo "Missing TLS private key for $domain. Run certbot before deploying."
+              fi
+
+              if ! sudo test -f "$cert_dir/privkey.pem"; then
+                echo "Missing TLS private key for $domain at $cert_dir/privkey.pem"
                 exit 1
-              }
-            done
+              fi
+
+              echo "TLS certificate found for $domain"
+            }
+
+            validate_certificate "$FRONTEND_DOMAIN"
+            validate_certificate "$API_DOMAIN"
 
             umask 077
             cat > .env <<EOF
