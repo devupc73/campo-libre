@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import CaptainCollectionReports from './CaptainCollectionReports';
 import CaptainCreateMatchPage from './CaptainCreateMatchPage';
 import CaptainDashboardHome from './CaptainDashboardHome';
 import CaptainMatchesPage from './CaptainMatchesPage';
@@ -9,7 +10,7 @@ import CaptainPaymentValidationPanel from './CaptainPaymentValidationPanel';
 import { SportsAction, SportsHero, SportsSectionTitle } from './SportsBrand';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
-type CaptainSection = 'home' | 'create' | 'matches' | 'payments' | 'official' | 'participants' | 'complexes';
+type CaptainSection = 'home' | 'create' | 'matches' | 'payments' | 'official' | 'participants' | 'complexes' | 'reports';
 
 export default function CaptainDashboard({ styles, userId, onBack }: any) {
   const [section, setSection] = useState<CaptainSection>('home');
@@ -91,6 +92,7 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
     if (section === 'complexes') return <CaptainNearbyComplexes styles={styles} />;
     if (section === 'official') return selectedMatch ? <CaptainOfficialAssociation styles={styles} userId={userId} selectedMatch={selectedMatch} onSaved={afterOfficialAssociationSaved} /> : <Text style={styles.status}>Selecciona una convocatoria desde “Mis convocatorias”.</Text>;
     if (section === 'participants') return renderParticipants();
+    if (section === 'reports') return <CaptainCollectionReports styles={styles} userId={userId} matches={matches} />;
     return <CaptainDashboardHome styles={styles} matches={matches} summary={summary} pendingPaymentsCount={pendingPayments.length || summary?.pending_validation_players || 0} onNavigate={setSection} />;
   }
 
@@ -102,6 +104,7 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
     <SportsAction styles={styles} icon="📋" title="Mis convocatorias" description="Revisa jugadores, cupos y estado." onPress={() => setSection('matches')} active={section === 'matches'} accent="amber" />
     <SportsAction styles={styles} icon="📍" title="Complejos cercanos" description="Compara campos, capacidades y distancia desde tu ubicación." onPress={() => setSection('complexes')} active={section === 'complexes'} accent="green" />
     <SportsAction styles={styles} icon="💳" title="Validar pagos" description="Confirma aportes de los participantes." onPress={() => setSection('payments')} active={section === 'payments'} accent="violet" />
+    <SportsAction styles={styles} icon="📊" title="Reportes de recaudación" description="Consulta pagos por convocatoria, consolidado y saldo disponible." onPress={() => setSection('reports')} active={section === 'reports'} accent="blue" />
     <SportsAction styles={styles} icon="🏟️" title="Reserva oficial" description="Asocia una convocatoria con cancha y horario." onPress={() => setSection('official')} active={section === 'official'} accent="green" />
     <View style={{ marginTop: 22 }}>{renderContent()}</View>
     {!!message && <Text style={styles.status}>{message}</Text>}
