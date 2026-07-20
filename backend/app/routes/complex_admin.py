@@ -202,15 +202,31 @@ def validate_match_payment(match_id: int, payload: dict):
     if not schedule or int(schedule.court_id or 0) != int(match.court_id):
         raise HTTPException(status_code=400, detail='La franja asociada no pertenece al campo')
 
+    if validation_status == 'validated':
+        conflicting_match = db.query(Match).filter(
+            Match.schedule_id == schedule.id,
+            Match.id != match.id,
+            Match.complex_payment_validation_status == 'validated',
+        ).first()
+        if conflicting_match:
+            raise HTTPException(status_code=409, detail='La franja ya fue reservada por otra convocatoria validada')
+
     match.complex_payment_validation_status = validation_status
 
     if validation_status == 'validated':
-        schedule.status = 'reserved'
-    elif validation_status in ['rejected', 'observed'] and schedule.status == 'reserved':
-        schedule.status = 'active'
+        schedule.is_reserved = True
+    elif validation_status in ['rejected', 'observed', 'pending_validation']:
+        other_validated_match = db.query(Match).filter(
+            Match.schedule_id == schedule.id,
+            Match.id != match.id,
+            Match.complex_payment_validation_status == 'validated',
+        ).first()
+        if not other_validated_match:
+            schedule.is_reserved = False
 
     db.commit()
     db.refresh(match)
+    db.refresh(schedule)
 
     return {
         'id': match.id,
@@ -219,5 +235,6 @@ def validate_match_payment(match_id: int, payload: dict):
         'schedule_id': match.schedule_id,
         'complex_payment_validation_status': match.complex_payment_validation_status,
         'schedule_status': schedule.status,
+        'schedule_is_reserved': bool(schedule.is_reserved),
         'message': 'Validación actualizada correctamente',
     }
