@@ -41,6 +41,16 @@ services:
     expose:
       - "80"
 
+  system-admin-frontend:
+    build:
+      context: ../../mobile
+      dockerfile: Dockerfile.web
+      args:
+        EXPO_PUBLIC_API_URL: https://${API_DOMAIN:?API_DOMAIN is required}
+    restart: unless-stopped
+    ports:
+      - "1907:80"
+
   nginx:
     image: nginx:1.27-alpine
     restart: unless-stopped

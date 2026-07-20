@@ -14,15 +14,20 @@ type Screen = 'portal' | 'login' | 'register' | 'systemRegister' | 'systemHome' 
 type Role = 'captain' | 'player';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
+const SYSTEM_ADMIN_PORT = '1907';
 const roleOptions = [
   { label: 'Capitán / gestor', value: 'captain' },
   { label: 'Jugador participante', value: 'player' },
 ];
 
-function portalFromPath(): Portal {
+function isSystemAdminPort() {
+  return typeof window !== 'undefined' && window.location.port === SYSTEM_ADMIN_PORT;
+}
+
+function portalFromLocation(): Portal {
   if (typeof window === 'undefined') return 'home';
+  if (isSystemAdminPort()) return 'system';
   const path = window.location.pathname.toLowerCase();
-  if (path.includes('admin-system')) return 'system';
   if (path.includes('complex-admin')) return 'complex';
   if (path.includes('general')) return 'general';
   return 'home';
@@ -48,7 +53,7 @@ const styles = {
 };
 
 export default function App() {
-  const [portal, setPortal] = useState<Portal>(portalFromPath());
+  const [portal, setPortal] = useState<Portal>(portalFromLocation());
   const [screen, setScreen] = useState<Screen>('portal');
   const [role, setRole] = useState<Role>('player');
   const [userId, setUserId] = useState('');
@@ -62,10 +67,12 @@ export default function App() {
   const [message, setMessage] = useState('');
 
   function go(nextPortal: Portal, path: string) {
+    if (nextPortal === 'system' && !isSystemAdminPort()) return;
     setPortal(nextPortal); setScreen('portal'); setMessage('');
     if (typeof window !== 'undefined') window.history.pushState({}, '', path);
   }
   function goHome() {
+    if (isSystemAdminPort()) { setPortal('system'); setScreen('portal'); setMessage(''); return; }
     setPortal('home'); setScreen('portal'); setUserId(''); setUserName(''); setMessage('');
     if (typeof window !== 'undefined') window.history.pushState({}, '', '/');
   }
@@ -114,16 +121,14 @@ export default function App() {
     } catch { setMessage('No se pudo registrar el administrador del sistema.'); }
   }
 
-  const authForm = (title: string, subtitle: string) => (
-    <View>
-      <SportsHero eyebrow="ACCESO SEGURO" title={title} subtitle={subtitle} icon="🔐" />
-      <TextInput style={styles.input} placeholder="Correo electrónico" placeholderTextColor="#718198" value={email} onChangeText={setEmail} />
-      <TextInput style={styles.input} placeholder="Contraseña" placeholderTextColor="#718198" value={password} onChangeText={setPassword} secureTextEntry />
-      <TouchableOpacity style={styles.primaryButton} onPress={login}><Text style={styles.buttonText}>Ingresar a mi cuenta</Text></TouchableOpacity>
-      <TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('portal')}><Text style={styles.buttonText}>Volver</Text></TouchableOpacity>
-      {!!message && <Text style={styles.status}>{message}</Text>}
-    </View>
-  );
+  const authForm = (title: string, subtitle: string) => <View>
+    <SportsHero eyebrow="ACCESO SEGURO" title={title} subtitle={subtitle} icon="🔐" />
+    <TextInput style={styles.input} placeholder="Correo electrónico" placeholderTextColor="#718198" value={email} onChangeText={setEmail} />
+    <TextInput style={styles.input} placeholder="Contraseña" placeholderTextColor="#718198" value={password} onChangeText={setPassword} secureTextEntry />
+    <TouchableOpacity style={styles.primaryButton} onPress={login}><Text style={styles.buttonText}>Ingresar a mi cuenta</Text></TouchableOpacity>
+    <TouchableOpacity style={styles.secondaryButton} onPress={() => setScreen('portal')}><Text style={styles.buttonText}>Volver</Text></TouchableOpacity>
+    {!!message && <Text style={styles.status}>{message}</Text>}
+  </View>;
 
   let content = null;
   if (portal === 'home') {
@@ -132,7 +137,6 @@ export default function App() {
       <SportsSectionTitle title="Elige tu experiencia" subtitle="Accede según lo que quieres hacer hoy" icon="⚡" />
       <SportsAction styles={styles} icon="⚽" title="Jugadores y capitanes" description="Crea equipos, participa en convocatorias y organiza tus partidos." onPress={() => go('general', '/general')} accent="green" />
       <SportsAction styles={styles} icon="🏟️" title="Administrador de complejo" description="Gestiona campos, horarios, reservas y operación comercial." onPress={() => go('complex', '/complex-admin')} accent="blue" />
-      <SportsAction styles={styles} icon="📊" title="Administrador del sistema" description="Controla usuarios, complejos y salud de la plataforma." onPress={() => go('system', '/admin-system')} accent="violet" />
       <Text style={styles.muted}>Campo Libre · Tecnología para vivir el deporte</Text>
     </View>;
   } else if (portal === 'complex') {
@@ -140,7 +144,7 @@ export default function App() {
   } else if (screen === 'portal' && portal === 'general') {
     content = <View style={styles.card}><SportsHero eyebrow="COMUNIDAD DEPORTIVA" title="Juega, organiza y conecta" subtitle="Gestiona tus convocatorias, pagos y partidos con una experiencia simple y rápida." icon="🥅" /><SportsAction styles={styles} icon="🔐" title="Ingresar" description="Continúa con tus convocatorias y partidos." onPress={() => setScreen('login')} /><SportsAction styles={styles} icon="✨" title="Crear una cuenta" description="Regístrate como jugador o capitán." onPress={() => setScreen('register')} accent="blue" /><TouchableOpacity style={styles.secondaryButton} onPress={goHome}><Text style={styles.buttonText}>Volver al inicio</Text></TouchableOpacity></View>;
   } else if (screen === 'portal' && portal === 'system') {
-    content = <View style={styles.card}><SportsHero eyebrow="CONTROL CENTRAL" title="Administración Campo Libre" subtitle="Visibilidad integral de la red de complejos, usuarios y operación." icon="🛡️" /><SportsAction styles={styles} icon="🔐" title="Ingresar al panel" onPress={() => setScreen('login')} accent="violet" /><SportsAction styles={styles} icon="👤" title="Registrar administrador" onPress={() => setScreen('systemRegister')} accent="blue" /><SportsAction styles={styles} icon="🟢" title="Comprobar conexión" description="Valida la disponibilidad del backend." onPress={checkBackendConnection} accent="green" /><TouchableOpacity style={styles.secondaryButton} onPress={goHome}><Text style={styles.buttonText}>Volver al inicio</Text></TouchableOpacity>{!!message && <Text style={styles.status}>{message}</Text>}</View>;
+    content = <View style={styles.card}><SportsHero eyebrow="CONTROL CENTRAL · PUERTO 1907" title="Administración Campo Libre" subtitle="Acceso independiente para controlar la red de complejos, usuarios y operación." icon="🛡️" /><SportsAction styles={styles} icon="🔐" title="Ingresar al panel" onPress={() => setScreen('login')} accent="violet" /><SportsAction styles={styles} icon="👤" title="Registrar administrador" onPress={() => setScreen('systemRegister')} accent="blue" /><SportsAction styles={styles} icon="🟢" title="Comprobar conexión" description="Valida la disponibilidad del backend." onPress={checkBackendConnection} accent="green" />{!!message && <Text style={styles.status}>{message}</Text>}</View>;
   } else if (screen === 'login') {
     content = <View style={styles.card}>{authForm(portal === 'system' ? 'Panel administrativo' : 'Bienvenido de vuelta', portal === 'system' ? 'Acceso reservado para la administración de la plataforma.' : 'Ingresa para continuar con tu experiencia deportiva.')}</View>;
   } else if (screen === 'register') {
