@@ -21,17 +21,16 @@ def list_availability(court_id: int, target_date: date):
         CourtSchedule.court_id == court_id,
         CourtSchedule.day_of_week == day_of_week,
         CourtSchedule.status == 'active',
+        CourtSchedule.is_reserved.is_(False),
     ).all()
 
     slots = []
-
     for schedule in schedules:
         slot_start = datetime.combine(target_date, schedule.start_time)
         schedule_end = datetime.combine(target_date, schedule.end_time)
 
         while slot_start < schedule_end:
             slot_end = slot_start + timedelta(hours=1)
-
             if slot_end > schedule_end:
                 break
 
@@ -44,13 +43,13 @@ def list_availability(court_id: int, target_date: date):
 
             slots.append({
                 'court_id': court_id,
+                'schedule_id': schedule.id,
                 'start_at': slot_start.isoformat(),
                 'end_at': slot_end.isoformat(),
                 'price_per_hour': schedule.price_per_hour,
                 'total_price': schedule.price_per_hour,
                 'available': reserved is None,
             })
-
             slot_start = slot_end
 
     return slots
