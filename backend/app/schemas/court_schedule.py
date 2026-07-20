@@ -10,6 +10,7 @@ class CourtScheduleBase(BaseModel):
     end_time: time
     price_per_hour: float
     status: str = 'active'
+    is_reserved: bool = False
 
 
 class CourtScheduleCreate(CourtScheduleBase):
