@@ -1,3 +1,4 @@
+from sqlalchemy import Boolean
 from sqlalchemy import Column
 from sqlalchemy import Float
 from sqlalchemy import Integer
@@ -17,3 +18,4 @@ class CourtSchedule(Base):
     end_time = Column(Time, nullable=False)
     price_per_hour = Column(Float, nullable=False, default=0)
     status = Column(String, default='active')
+    is_reserved = Column(Boolean, nullable=False, default=False)
