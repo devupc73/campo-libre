@@ -2,7 +2,26 @@ import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import DashboardCards from './DashboardCards';
 
-export default function CaptainDashboardHome({ styles, matches, summary, pendingPaymentsCount, onNavigate }: any) {
+function money(value: number) {
+  return `S/ ${Number(value || 0).toFixed(2)}`;
+}
+
+export default function CaptainDashboardHome({ styles, matches, onNavigate }: any) {
+  const validatedTotal = matches.reduce(
+    (sum: number, match: any) => sum + Number(match.validated_collected_amount ?? match.collected_amount ?? 0),
+    0,
+  );
+  const declaredTotal = matches.reduce(
+    (sum: number, match: any) => sum + Number(match.declared_collected_amount ?? match.collected_amount ?? 0),
+    0,
+  );
+  const pendingValidationTotal = Math.max(declaredTotal - validatedTotal, 0);
+  const paidToComplexTotal = matches.reduce(
+    (sum: number, match: any) => sum + Number(match.paid_to_complex || 0),
+    0,
+  );
+  const availableBalance = validatedTotal - paidToComplexTotal;
+
   return (
     <View>
       <Text style={styles.title}>Panel del gestor</Text>
@@ -11,8 +30,10 @@ export default function CaptainDashboardHome({ styles, matches, summary, pending
         styles={styles}
         items={[
           { label: 'Convocatorias', value: matches.length, description: 'Creadas por el gestor' },
-          { label: 'Fondo', value: `S/ ${summary?.accumulated_fund || 0}`, description: 'Saldo validado' },
-          { label: 'Pagos por validar', value: pendingPaymentsCount || 0, description: 'Jugadores' },
+          { label: 'Total validado', value: money(validatedTotal), description: 'Pagos aprobados de jugadores' },
+          { label: 'Por validar', value: money(pendingValidationTotal), description: 'Pagos registrados pendientes' },
+          { label: 'Pagado a complejos', value: money(paidToComplexTotal), description: 'Transferencias registradas' },
+          { label: 'Saldo', value: money(availableBalance), description: 'Validado menos pago a complejos' },
         ]}
       />
       <TouchableOpacity style={styles.moduleButton} onPress={() => onNavigate('create')}>
