@@ -39,6 +39,7 @@ from app.routes.users import router as users_router
 Base.metadata.create_all(bind=engine)
 with engine.begin() as connection:
     connection.execute(text('ALTER TABLE sports_complexes ADD COLUMN IF NOT EXISTS logo_url TEXT'))
+    connection.execute(text('ALTER TABLE court_schedules ADD COLUMN IF NOT EXISTS is_reserved BOOLEAN NOT NULL DEFAULT FALSE'))
 
 app = FastAPI(title='Campo Libre API')
 
