@@ -5,7 +5,7 @@ import DashboardCards from './DashboardCards';
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 
 function money(value: number) {
-  return `S/ ${Math.round(value || 0)}`;
+  return `S/ ${Number(value || 0).toFixed(2)}`;
 }
 
 async function responseError(response: Response) {
@@ -82,11 +82,16 @@ export default function ComplexReports({ styles, selectedComplex }: any) {
     }
   }
 
-  const confirmedReservations = reservations.filter((item) => item.status === 'confirmed').length;
-  const pendingReservations = reservations.filter((item) => item.status !== 'confirmed').length;
-  const paidAmount = payments.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const matchPaidAmount = matchPayments.reduce((sum, item) => sum + Number(item.paid_to_complex || 0), 0);
-  const pendingMatchPayments = matchPayments.filter((item) => item.complex_payment_validation_status === 'pending_validation').length;
+  const validatedMatches = matchPayments.filter((item) => item.complex_payment_validation_status === 'validated');
+  const pendingMatches = matchPayments.filter((item) => (item.complex_payment_validation_status || 'pending_validation') === 'pending_validation');
+  const observedMatches = matchPayments.filter((item) => item.complex_payment_validation_status === 'observed');
+  const rejectedMatches = matchPayments.filter((item) => item.complex_payment_validation_status === 'rejected');
+
+  const validatedAmount = validatedMatches.reduce((sum, item) => sum + Number(item.paid_to_complex || 0), 0);
+  const pendingAmount = pendingMatches.reduce((sum, item) => sum + Number(item.paid_to_complex || 0), 0);
+  const observedAmount = observedMatches.reduce((sum, item) => sum + Number(item.paid_to_complex || 0), 0);
+  const registeredAmount = matchPayments.reduce((sum, item) => sum + Number(item.paid_to_complex || 0), 0);
+  const legacyConfirmedReservations = reservations.filter((item) => item.status === 'confirmed').length;
   const potentialAmount = rates.reduce((sum, item) => sum + Number(item.price_per_hour || 0), 0);
   const configuredSlots = rates.length;
   const courtsWithRates = new Set(rates.map((item) => item.court_id)).size;
@@ -104,12 +109,14 @@ export default function ComplexReports({ styles, selectedComplex }: any) {
         styles={styles}
         items={[
           { label: 'Campos', value: courts.length, description: 'Campos registrados' },
-          { label: 'Reservas', value: reservations.length, description: 'Total del complejo' },
-          { label: 'Confirmadas', value: confirmedReservations, description: 'Reservas confirmadas' },
-          { label: 'Pendientes', value: pendingReservations, description: 'Por confirmar/revisar' },
-          { label: 'Pagos recibidos', value: money(paidAmount + matchPaidAmount), description: 'Monto registrado' },
-          { label: 'Pagos por validar', value: pendingMatchPayments, description: 'De capitanes' },
-          { label: 'Ingreso potencial', value: money(potentialAmount), description: 'Tarifas configuradas' },
+          { label: 'Reservas confirmadas', value: validatedMatches.length, description: 'Pagos de gestores validados' },
+          { label: 'Monto confirmado', value: money(validatedAmount), description: 'Ingreso validado' },
+          { label: 'Por validar', value: pendingMatches.length, description: money(pendingAmount) },
+          { label: 'Observados', value: observedMatches.length, description: money(observedAmount) },
+          { label: 'Rechazados', value: rejectedMatches.length, description: 'Pagos rechazados' },
+          { label: 'Monto registrado', value: money(registeredAmount), description: 'Todos los pagos de gestores' },
+          { label: 'Reservas tradicionales', value: reservations.length, description: `${legacyConfirmedReservations} confirmadas` },
+          { label: 'Ingreso potencial', value: money(potentialAmount), description: 'Suma de tarifas configuradas' },
           { label: 'Franjas tarifadas', value: configuredSlots, description: 'Disponibilidad con precio' },
           { label: 'Campos tarifados', value: courtsWithRates, description: 'Campos con tarifa' },
         ]}
