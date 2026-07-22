@@ -1,5 +1,6 @@
 from sqlalchemy import Boolean
 from sqlalchemy import Column
+from sqlalchemy import Date
 from sqlalchemy import Float
 from sqlalchemy import Integer
 from sqlalchemy import String
@@ -13,6 +14,7 @@ class CourtSchedule(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     court_id = Column(Integer, nullable=False)
+    calendar_date = Column(Date, nullable=True, index=True)
     day_of_week = Column(Integer, nullable=False)
     start_time = Column(Time, nullable=False)
     end_time = Column(Time, nullable=False)
