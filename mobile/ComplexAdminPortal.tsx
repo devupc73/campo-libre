@@ -60,7 +60,7 @@ export default function ComplexAdminPortal({ styles, onLogout }: Props) {
   }
 
   if (!userId) return <View>
-    <SportsHero eyebrow="GESTIÓN DEPORTIVA" title="Haz crecer tu complejo" subtitle="Administra campos, franjas, reservas e indicadores desde un panel pensado para operadores deportivos." icon="🏟️" badge="Portal del complejo" />
+    <SportsHero eyebrow="GESTIÓN DEPORTIVA" title="Haz crecer tu complejo" subtitle="Administra campos, fechas, franjas, reservas e indicadores desde un panel pensado para operadores deportivos." icon="🏟️" badge="Portal del complejo" />
     <TextInput style={styles.input} placeholder="Correo del administrador" placeholderTextColor="#718198" value={email} onChangeText={setEmail} />
     <TextInput style={styles.input} placeholder="Contraseña" placeholderTextColor="#718198" value={password} onChangeText={setPassword} secureTextEntry />
     <TouchableOpacity style={styles.primaryButton} onPress={login}><Text style={styles.buttonText}>Ingresar al complejo</Text></TouchableOpacity>
@@ -80,9 +80,9 @@ export default function ComplexAdminPortal({ styles, onLogout }: Props) {
     <SportsAction styles={styles} icon="📊" title="Dashboard" description="Resumen operativo y comercial." onPress={() => setActiveSection('dashboard')} active={activeSection === 'dashboard'} />
     <SportsAction styles={styles} icon="📝" title="Datos del complejo" description="Información comercial y de contacto." onPress={() => setActiveSection('settings')} active={activeSection === 'settings'} accent="blue" />
     <SportsAction styles={styles} icon="🥅" title="Campos deportivos" description="Crea, modifica y administra tus canchas." onPress={() => setActiveSection('fields')} active={activeSection === 'fields'} accent="amber" />
-    <SportsAction styles={styles} icon="📅" title="Calendario semanal" description="Disponibilidad, tarifas y franjas." onPress={() => setActiveSection('calendar')} active={activeSection === 'calendar'} accent="green" />
-    <SportsAction styles={styles} icon="💳" title="Pagos por validar" description="Aprueba, observa o rechaza pagos de gestores y reserva la franja." onPress={() => setActiveSection('payments')} active={activeSection === 'payments'} accent="amber" />
-    <SportsAction styles={styles} icon="✅" title="Reservas confirmadas" description="Consulta montos pagados y exporta el reporte en CSV." onPress={() => setActiveSection('confirmedReservations')} active={activeSection === 'confirmedReservations'} accent="green" />
+    <SportsAction styles={styles} icon="📅" title="Calendario por fechas" description="Disponibilidad diaria y control por año, mes, semana o día." onPress={() => setActiveSection('calendar')} active={activeSection === 'calendar'} accent="green" />
+    <SportsAction styles={styles} icon="💳" title="Pagos por validar" description="Aprueba, observa o rechaza pagos de gestores y reserva la franja fechada." onPress={() => setActiveSection('payments')} active={activeSection === 'payments'} accent="amber" />
+    <SportsAction styles={styles} icon="✅" title="Reservas confirmadas" description="Consulta fechas, montos pagados y exporta el reporte en CSV." onPress={() => setActiveSection('confirmedReservations')} active={activeSection === 'confirmedReservations'} accent="green" />
     <SportsAction styles={styles} icon="📈" title="Reportes y consultas" description="Indicadores para tomar mejores decisiones." onPress={() => setActiveSection('reports')} active={activeSection === 'reports'} accent="violet" />
     <View style={{ marginTop: 22 }}>{renderSection()}</View>
     <TouchableOpacity style={styles.secondaryButton} onPress={() => setSelectedComplex(null)}><Text style={styles.buttonText}>Cambiar complejo</Text></TouchableOpacity>

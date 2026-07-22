@@ -1,3 +1,4 @@
+from datetime import date
 from datetime import time
 
 from pydantic import BaseModel
@@ -5,6 +6,7 @@ from pydantic import BaseModel
 
 class CourtScheduleBase(BaseModel):
     court_id: int
+    calendar_date: date | None = None
     day_of_week: int
     start_time: time
     end_time: time

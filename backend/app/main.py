@@ -40,6 +40,8 @@ Base.metadata.create_all(bind=engine)
 with engine.begin() as connection:
     connection.execute(text('ALTER TABLE sports_complexes ADD COLUMN IF NOT EXISTS logo_url TEXT'))
     connection.execute(text('ALTER TABLE court_schedules ADD COLUMN IF NOT EXISTS is_reserved BOOLEAN NOT NULL DEFAULT FALSE'))
+    connection.execute(text('ALTER TABLE court_schedules ADD COLUMN IF NOT EXISTS calendar_date DATE'))
+    connection.execute(text('CREATE INDEX IF NOT EXISTS ix_court_schedules_calendar_date ON court_schedules (calendar_date)'))
 
 app = FastAPI(title='Campo Libre API')
 

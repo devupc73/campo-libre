@@ -5,7 +5,6 @@ import ComplexLocationCard from './ComplexLocationCard';
 import ComplexMedia from './ComplexMedia';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
-const dayNames: any = { 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado', 7: 'Domingo' };
 const paymentMethodOptions = [
   { label: 'Yape', value: 'yape' },
   { label: 'Transferencia bancaria', value: 'transferencia' },
@@ -66,21 +65,24 @@ export default function CaptainOfficialAssociation({ styles, userId, selectedMat
 
   async function loadSchedules(courtId: string, preserveScheduleId = '') {
     if (!preserveScheduleId) setSelectedScheduleId('');
+    if (!selectedMatch?.match_date) { setSchedules([]); setMessage('La convocatoria debe tener una fecha específica antes de seleccionar una franja.'); return; }
     try {
-      const response = await fetch(`${API_URL}/court-schedules?court_id=${courtId}`);
+      const date = selectedMatch.match_date;
+      const response = await fetch(`${API_URL}/court-schedules?court_id=${courtId}&date_from=${date}&date_to=${date}`);
       if (!response.ok) throw new Error(await responseError(response));
       const data = await response.json();
-      const available = Array.isArray(data) ? data.filter((slot: any) => slot.status === 'active' && !slot.is_reserved) : [];
+      const available = Array.isArray(data) ? data.filter((slot: any) => slot.calendar_date === date && slot.status === 'active' && !slot.is_reserved) : [];
       setSchedules(available);
       if (preserveScheduleId && available.some((slot: any) => String(slot.id) === preserveScheduleId)) setSelectedScheduleId(preserveScheduleId);
       else if (preserveScheduleId) setSelectedScheduleId('');
-    } catch (error: any) { setSchedules([]); setMessage(error.message || 'No se pudieron cargar las franjas.'); }
+    } catch (error: any) { setSchedules([]); setMessage(error.message || 'No se pudieron cargar las franjas de la fecha indicada.'); }
   }
 
   async function saveAssociation() {
+    if (!selectedMatch?.match_date) { setMessage('La convocatoria debe tener una fecha específica.'); return; }
     if (!selectedComplexId || !selectedCourtId || !selectedScheduleId) { setMessage('Selecciona complejo, campo y franja antes de guardar la asociación.'); return; }
     if (!selectedCourt || String(selectedCourt.complex_id) !== selectedComplexId) { setMessage('El campo seleccionado no pertenece al complejo indicado.'); return; }
-    if (!selectedSchedule || String(selectedSchedule.court_id) !== selectedCourtId || selectedSchedule.is_reserved) { setMessage('La franja seleccionada no está disponible.'); return; }
+    if (!selectedSchedule || selectedSchedule.calendar_date !== selectedMatch.match_date || String(selectedSchedule.court_id) !== selectedCourtId || selectedSchedule.is_reserved) { setMessage('La franja seleccionada no corresponde a la fecha de la convocatoria o ya no está disponible.'); return; }
     try {
       const response = await fetch(`${API_URL}/matches/${selectedMatch.id}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -97,7 +99,7 @@ export default function CaptainOfficialAssociation({ styles, userId, selectedMat
         }),
       });
       if (!response.ok) throw new Error(await responseError(response));
-      const data = await response.json(); setMessage('Convocatoria asociada correctamente. El pago queda pendiente de validación.');
+      const data = await response.json(); setMessage('Convocatoria asociada a una fecha y franja específicas. El pago queda pendiente de validación.');
       if (onSaved) await onSaved(data);
     } catch (error: any) { setMessage(error.message || 'No se pudo guardar la asociación oficial.'); }
   }
@@ -105,12 +107,12 @@ export default function CaptainOfficialAssociation({ styles, userId, selectedMat
   if (!selectedMatch) return null;
   return <View>
     <Text style={styles.title}>Asociación oficial</Text>
-    <Text style={styles.subtitle}>Asocia una convocatoria con un complejo, campo y franja activa que todavía esté libre.</Text>
+    <Text style={styles.subtitle}>Fecha de la convocatoria: {selectedMatch.match_date || 'sin fecha'}. Solo se muestran franjas disponibles para ese día exacto.</Text>
     <ComboSelect styles={styles} label="Complejo deportivo" value={selectedComplexId} options={complexes.map((complex) => ({ label: `${complex.name} (${complex.address || 'sin dirección'})`, value: String(complex.id) }))} onChange={(value) => { setSelectedComplexId(value); loadCourts(value); }} />
     {!!selectedComplex && <><ComplexMedia styles={styles} complex={selectedComplex} compact /><ComplexLocationCard styles={styles} complex={selectedComplex} title={`Ubicación de ${selectedComplex.name}`} /></>}
     <ComboSelect styles={styles} label="Campo" value={selectedCourtId} options={courts.map((court) => ({ label: `${court.name} - ${court.sport}`, value: String(court.id) }))} onChange={(value) => { setSelectedCourtId(value); loadSchedules(value); }} />
-    <ComboSelect styles={styles} label="Franja horaria disponible" value={selectedScheduleId} options={schedules.map((slot) => ({ label: `${dayNames[Number(slot.day_of_week)] || slot.day_of_week} ${slot.start_time} - ${slot.end_time} | S/ ${slot.price_per_hour || 0}`, value: String(slot.id) }))} onChange={setSelectedScheduleId} />
-    {!schedules.length && !!selectedCourtId && <Text style={styles.status}>No existen franjas activas y libres para este campo.</Text>}
+    <ComboSelect styles={styles} label="Franja disponible para la fecha" value={selectedScheduleId} options={schedules.map((slot) => ({ label: `${slot.calendar_date} ${String(slot.start_time).slice(0, 5)} - ${String(slot.end_time).slice(0, 5)} | S/ ${slot.price_per_hour || 0}`, value: String(slot.id) }))} onChange={setSelectedScheduleId} />
+    {!schedules.length && !!selectedCourtId && <Text style={styles.status}>No existen franjas activas y libres para {selectedMatch.match_date || 'la fecha indicada'}.</Text>}
     <TextInput style={styles.input} placeholder="Monto pagado al complejo" placeholderTextColor="#64748b" value={paidToComplex} onChangeText={setPaidToComplex} />
     <ComboSelect styles={styles} label="Método de pago" value={complexPaymentMethod} options={paymentMethodOptions} onChange={setComplexPaymentMethod} />
     <TextInput style={styles.input} placeholder="Número de operación" placeholderTextColor="#64748b" value={complexOperationCode} onChangeText={setComplexOperationCode} />
