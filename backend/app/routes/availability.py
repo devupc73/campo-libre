@@ -3,6 +3,7 @@ from datetime import datetime
 from datetime import timedelta
 
 from fastapi import APIRouter
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
@@ -17,12 +18,22 @@ def list_availability(court_id: int, target_date: date):
     db: Session = SessionLocal()
     day_of_week = target_date.isoweekday()
 
-    schedules = db.query(CourtSchedule).filter(
+    dated_schedules = db.query(CourtSchedule).filter(
         CourtSchedule.court_id == court_id,
-        CourtSchedule.day_of_week == day_of_week,
+        CourtSchedule.calendar_date == target_date,
         CourtSchedule.status == 'active',
         CourtSchedule.is_reserved.is_(False),
     ).all()
+
+    schedules = dated_schedules
+    if not schedules:
+        schedules = db.query(CourtSchedule).filter(
+            CourtSchedule.court_id == court_id,
+            CourtSchedule.calendar_date.is_(None),
+            CourtSchedule.day_of_week == day_of_week,
+            CourtSchedule.status == 'active',
+            CourtSchedule.is_reserved.is_(False),
+        ).all()
 
     slots = []
     for schedule in schedules:
@@ -44,6 +55,7 @@ def list_availability(court_id: int, target_date: date):
             slots.append({
                 'court_id': court_id,
                 'schedule_id': schedule.id,
+                'calendar_date': target_date.isoformat(),
                 'start_at': slot_start.isoformat(),
                 'end_at': slot_end.isoformat(),
                 'price_per_hour': schedule.price_per_hour,
