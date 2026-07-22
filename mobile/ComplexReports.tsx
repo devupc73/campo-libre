@@ -23,6 +23,7 @@ export default function ComplexReports({ styles, selectedComplex }: any) {
   const [payments, setPayments] = useState<any[]>([]);
   const [matchPayments, setMatchPayments] = useState<any[]>([]);
   const [rates, setRates] = useState<any[]>([]);
+  const [schedules, setSchedules] = useState<any[]>([]);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -48,11 +49,28 @@ export default function ComplexReports({ styles, selectedComplex }: any) {
       if (!matchPaymentsRes.ok) throw new Error(await responseError(matchPaymentsRes));
       if (!ratesRes.ok) throw new Error(await responseError(ratesRes));
 
-      setCourts(await courtsRes.json());
-      setReservations(await reservationsRes.json());
-      setPayments(await paymentsRes.json());
-      setMatchPayments(await matchPaymentsRes.json());
-      setRates(await ratesRes.json());
+      const courtsData = await courtsRes.json();
+      const reservationsData = await reservationsRes.json();
+      const paymentsData = await paymentsRes.json();
+      const matchPaymentsData = await matchPaymentsRes.json();
+      const ratesData = await ratesRes.json();
+
+      const scheduleResponses = await Promise.all(
+        (Array.isArray(courtsData) ? courtsData : []).map((court) =>
+          fetch(`${API_URL}/court-schedules?court_id=${court.id}`),
+        ),
+      );
+      const invalidScheduleResponse = scheduleResponses.find((response) => !response.ok);
+      if (invalidScheduleResponse) throw new Error(await responseError(invalidScheduleResponse));
+      const scheduleGroups = await Promise.all(scheduleResponses.map((response) => response.json()));
+      const schedulesData = scheduleGroups.flatMap((group) => (Array.isArray(group) ? group : []));
+
+      setCourts(Array.isArray(courtsData) ? courtsData : []);
+      setReservations(Array.isArray(reservationsData) ? reservationsData : []);
+      setPayments(Array.isArray(paymentsData) ? paymentsData : []);
+      setMatchPayments(Array.isArray(matchPaymentsData) ? matchPaymentsData : []);
+      setRates(Array.isArray(ratesData) ? ratesData : []);
+      setSchedules(schedulesData);
       setMessage('');
     } catch (error: any) {
       setMessage(error.message || 'No se pudieron cargar los reportes del complejo.');
@@ -92,9 +110,15 @@ export default function ComplexReports({ styles, selectedComplex }: any) {
   const observedAmount = observedMatches.reduce((sum, item) => sum + Number(item.paid_to_complex || 0), 0);
   const registeredAmount = matchPayments.reduce((sum, item) => sum + Number(item.paid_to_complex || 0), 0);
   const legacyConfirmedReservations = reservations.filter((item) => item.status === 'confirmed').length;
-  const potentialAmount = rates.reduce((sum, item) => sum + Number(item.price_per_hour || 0), 0);
-  const configuredSlots = rates.length;
-  const courtsWithRates = new Set(rates.map((item) => item.court_id)).size;
+
+  const activeSchedules = schedules.filter((item) => item.status === 'active');
+  const reservedSchedules = activeSchedules.filter((item) => Boolean(item.is_reserved));
+  const availableSchedules = activeSchedules.filter((item) => !item.is_reserved);
+  const inactiveSchedules = schedules.filter((item) => item.status !== 'active');
+  const potentialAmount = activeSchedules.reduce((sum, item) => sum + Number(item.price_per_hour || 0), 0);
+  const availablePotentialAmount = availableSchedules.reduce((sum, item) => sum + Number(item.price_per_hour || 0), 0);
+  const reservedPotentialAmount = reservedSchedules.reduce((sum, item) => sum + Number(item.price_per_hour || 0), 0);
+  const courtsWithSchedules = new Set(schedules.map((item) => item.court_id)).size;
 
   return (
     <View>
@@ -116,9 +140,13 @@ export default function ComplexReports({ styles, selectedComplex }: any) {
           { label: 'Rechazados', value: rejectedMatches.length, description: 'Pagos rechazados' },
           { label: 'Monto registrado', value: money(registeredAmount), description: 'Todos los pagos de gestores' },
           { label: 'Reservas tradicionales', value: reservations.length, description: `${legacyConfirmedReservations} confirmadas` },
-          { label: 'Ingreso potencial', value: money(potentialAmount), description: 'Suma de tarifas configuradas' },
-          { label: 'Franjas tarifadas', value: configuredSlots, description: 'Disponibilidad con precio' },
-          { label: 'Campos tarifados', value: courtsWithRates, description: 'Campos con tarifa' },
+          { label: 'Ingreso potencial', value: money(potentialAmount), description: 'Todas las franjas activas' },
+          { label: 'Potencial disponible', value: money(availablePotentialAmount), description: 'Franjas activas y libres' },
+          { label: 'Valor reservado', value: money(reservedPotentialAmount), description: 'Franjas activas reservadas' },
+          { label: 'Franjas activas', value: activeSchedules.length, description: `${availableSchedules.length} libres` },
+          { label: 'Franjas reservadas', value: reservedSchedules.length, description: 'Con reserva confirmada o manual' },
+          { label: 'Franjas inactivas', value: inactiveSchedules.length, description: 'No disponibles para reserva' },
+          { label: 'Campos con horario', value: courtsWithSchedules, description: 'Campos con franjas configuradas' },
         ]}
       />
 
@@ -175,20 +203,25 @@ export default function ComplexReports({ styles, selectedComplex }: any) {
         ))}
       </ScrollView>
 
-      <Text style={styles.title}>Disponibilidad con tarifa</Text>
-      <ScrollView style={{ maxHeight: 260 }}>
-        {rates.map((item) => {
+      <Text style={styles.title}>Franjas reales del calendario</Text>
+      <ScrollView style={{ maxHeight: 320 }}>
+        {schedules.map((item) => {
           const court = courts.find((courtItem) => Number(courtItem.id) === Number(item.court_id));
           return (
-            <View key={`rate-${item.id}`} style={styles.card}>
-              <Text style={styles.cardTitle}>{court?.name || 'Campo'} - S/ {item.price_per_hour}</Text>
+            <View key={`schedule-${item.id}`} style={styles.card}>
+              <Text style={styles.cardTitle}>{court?.name || 'Campo'} - {money(Number(item.price_per_hour || 0))}</Text>
               <Text style={styles.moduleText}>Día: {item.day_of_week}</Text>
               <Text style={styles.moduleText}>{item.start_time} - {item.end_time}</Text>
-              <Text style={styles.moduleText}>{item.description || ''}</Text>
+              <Text style={styles.moduleText}>Estado: {item.status === 'active' ? 'Activa' : 'Inactiva'}</Text>
+              <Text style={styles.moduleText}>Reserva: {item.is_reserved ? 'Reservada' : 'Libre'}</Text>
             </View>
           );
         })}
       </ScrollView>
+
+      {!!rates.length && (
+        <Text style={styles.moduleText}>Se encontraron {rates.length} tarifas históricas. Los indicadores usan las franjas reales del calendario.</Text>
+      )}
 
       {!!message && <Text style={styles.status}>{message}</Text>}
     </View>
