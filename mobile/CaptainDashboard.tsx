@@ -12,7 +12,16 @@ import { SportsAction, SportsHero, SportsSectionTitle } from './SportsBrand';
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 type CaptainSection = 'home' | 'create' | 'matches' | 'payments' | 'official' | 'participants' | 'complexes' | 'reports';
 
+function isoDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export default function CaptainDashboard({ styles, userId, onBack }: any) {
+  const today = isoDate(new Date());
+  const nextWeek = new Date(); nextWeek.setDate(nextWeek.getDate() + 7);
   const [section, setSection] = useState<CaptainSection>('home');
   const [matches, setMatches] = useState<any[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<any>(null);
@@ -20,12 +29,12 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
   const [summary, setSummary] = useState<any>(null);
   const [message, setMessage] = useState('');
   const [title, setTitle] = useState('Pichanga viernes');
-  const [matchDate, setMatchDate] = useState('');
-  const [matchTime, setMatchTime] = useState('');
+  const [matchDate, setMatchDate] = useState(isoDate(nextWeek));
+  const [matchTime, setMatchTime] = useState('20:00');
   const [location, setLocation] = useState('');
   const [maxPlayers, setMaxPlayers] = useState('14');
   const [fee, setFee] = useState('25');
-  const [paymentDeadline, setPaymentDeadline] = useState('');
+  const [paymentDeadline, setPaymentDeadline] = useState(today);
 
   useEffect(() => { loadMatches(); }, []);
 
@@ -39,6 +48,8 @@ export default function CaptainDashboard({ styles, userId, onBack }: any) {
   }
 
   async function createMatch() {
+    if (!matchDate || !paymentDeadline) { setMessage('Selecciona la fecha del partido y la fecha límite de pago.'); return; }
+    if (paymentDeadline > matchDate) { setMessage('La fecha límite de pago no puede ser posterior al partido.'); return; }
     try {
       const response = await fetch(`${API_URL}/matches`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
