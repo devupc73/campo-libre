@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ComboSelect from './ComboSelect';
 import ComplexLocationCard from './ComplexLocationCard';
-import ComplexMedia from './ComplexMedia';
+import { ComplexMediaDisplay } from './ComplexMedia';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 const paymentMethodOptions = [
@@ -55,6 +55,7 @@ export default function CaptainOfficialAssociation({ styles, userId, selectedMat
 
   async function loadCourts(complexId: string, preserveCourtId = '') {
     if (!preserveCourtId) { setSelectedCourtId(''); setSelectedScheduleId(''); setSchedules([]); }
+    setMessage('');
     try {
       const response = await fetch(`${API_URL}/courts/?complex_id=${complexId}`);
       if (!response.ok) throw new Error(await responseError(response));
@@ -66,6 +67,7 @@ export default function CaptainOfficialAssociation({ styles, userId, selectedMat
   async function loadSchedules(courtId: string, preserveScheduleId = '') {
     if (!preserveScheduleId) setSelectedScheduleId('');
     if (!selectedMatch?.match_date) { setSchedules([]); setMessage('La convocatoria debe tener una fecha específica antes de seleccionar una franja.'); return; }
+    setMessage('');
     try {
       const date = selectedMatch.match_date;
       const response = await fetch(`${API_URL}/court-schedules?court_id=${courtId}&date_from=${date}&date_to=${date}`);
@@ -109,11 +111,11 @@ export default function CaptainOfficialAssociation({ styles, userId, selectedMat
     <Text style={styles.title}>Asociación oficial</Text>
     <Text style={styles.subtitle}>Fecha de la convocatoria: {selectedMatch.match_date || 'sin fecha'}. Solo se muestran franjas disponibles para ese día exacto.</Text>
     <ComboSelect styles={styles} label="Complejo deportivo" value={selectedComplexId} options={complexes.map((complex) => ({ label: `${complex.name} (${complex.address || 'sin dirección'})`, value: String(complex.id) }))} onChange={(value) => { setSelectedComplexId(value); loadCourts(value); }} />
-    {!!selectedComplex && <><ComplexMedia styles={styles} complex={selectedComplex} compact /><ComplexLocationCard styles={styles} complex={selectedComplex} title={`Ubicación de ${selectedComplex.name}`} /></>}
+    {!!selectedComplex && <><ComplexMediaDisplay styles={styles} complex={selectedComplex} compact /><ComplexLocationCard styles={styles} complex={selectedComplex} title={`Ubicación de ${selectedComplex.name}`} /></>}
     <ComboSelect styles={styles} label="Campo" value={selectedCourtId} options={courts.map((court) => ({ label: `${court.name} - ${court.sport}`, value: String(court.id) }))} onChange={(value) => { setSelectedCourtId(value); loadSchedules(value); }} />
     <ComboSelect styles={styles} label="Franja disponible para la fecha" value={selectedScheduleId} options={schedules.map((slot) => ({ label: `${slot.calendar_date} ${String(slot.start_time).slice(0, 5)} - ${String(slot.end_time).slice(0, 5)} | S/ ${slot.price_per_hour || 0}`, value: String(slot.id) }))} onChange={setSelectedScheduleId} />
     {!schedules.length && !!selectedCourtId && <Text style={styles.status}>No existen franjas activas y libres para {selectedMatch.match_date || 'la fecha indicada'}.</Text>}
-    <TextInput style={styles.input} placeholder="Monto pagado al complejo" placeholderTextColor="#64748b" value={paidToComplex} onChangeText={setPaidToComplex} />
+    <TextInput style={styles.input} placeholder="Monto pagado al complejo" placeholderTextColor="#64748b" value={paidToComplex} onChangeText={setPaidToComplex} keyboardType="numeric" />
     <ComboSelect styles={styles} label="Método de pago" value={complexPaymentMethod} options={paymentMethodOptions} onChange={setComplexPaymentMethod} />
     <TextInput style={styles.input} placeholder="Número de operación" placeholderTextColor="#64748b" value={complexOperationCode} onChangeText={setComplexOperationCode} />
     <TouchableOpacity style={styles.primaryButton} onPress={saveAssociation}><Text style={styles.buttonText}>Guardar asociación oficial</Text></TouchableOpacity>
